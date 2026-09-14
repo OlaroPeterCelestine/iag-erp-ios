@@ -44,7 +44,13 @@ public final class ErpStore {
     }
 
     public func count(moduleId: String, entity: String) -> Int {
-        records.filter { $0.moduleId == moduleId && $0.entity == entity }.count
+        recordsFor(moduleId, entity).count
+    }
+
+    public func recordsFor(_ moduleId: String, _ entity: String) -> [ErpRecord] {
+        if entity == "My punches" { return myPunches() }
+        if entity == "Punch Log" && moduleId == "clock-in" { return forEntity("payroll", "Punch Log") }
+        return forEntity(moduleId, entity)
     }
 
     public func searchHits(_ query: String) -> [SearchHit] {
@@ -71,7 +77,99 @@ public final class ErpStore {
         return Array(hits.prefix(30))
     }
 
-    public func addListener(_ listener: @escaping () -> Void) { listeners.append(listener) }
+    public var canClockIn: Bool { user != nil && crudForRole(roleName, definition: currentRole).view }
+
+    public func geofenceZones() -> [GeofenceZone] {
+        let sites = forEntity("payroll", "Sites").compactMap { zoneFromRecord($0, kind: "site") }
+        let blocks = forEntity("payroll", "Blocks").compactMap { zoneFromRecord($0, kind: "block") }
+        return blocks + sites
+    }
+
+    public func myPunches() -> [ErpRecord] {
+        let name = (user?.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return forEntity("payroll", "Attendance").filter { recordField($0, "employee", "Employee") == name || $0.subtitle.contains(name) || $0.title.contains(name) }
+    }
+
+    public func openAttendanceToday() -> ErpRecord? {
+        let today = todayIsoDate()
+        return myPunches().first { rec in
+            rec.date == today && !recordField(rec, "clockIn", "Clock in").isEmpty && recordField(rec, "clockOut", "Clock out").isEmpty
+        }
+    }
+
+    @discardableResult
+    public func punch(kind: String, latitude: Double, longitude: Double, accuracy: Double) -> String? {
+        guard canClockIn else { return "Sign in to clock in." }
+        let check = verifyAgainstZones(GeoPoint(latitude: latitude, longitude: longitude), geofenceZones(), accuracyMeters: accuracy)
+        let name = user?.name ?? "Staff"
+        let clock = nowClock()
+        let today = todayIsoDate()
+        if check.status == "Outside" {
+            addPunchLog(kind: kind, name: name, check: check, latitude: latitude, longitude: longitude, accuracy: accuracy)
+            return check.note
+        }
+        if kind == "in" {
+            if openAttendanceToday() != nil { return "You already have an open check-in today. Clock out first." }
+            let site = check.zone?.kind == "site" ? (check.zone?.name ?? "") : (check.zone?.siteName ?? "")
+            let block = check.zone?.kind == "block" ? (check.zone?.name ?? "") : ""
+            insertRecord(ErpRecord(
+                id: newId(),
+                moduleId: "payroll",
+                entity: "Attendance",
+                title: "ATT-\(today.replacingOccurrences(of: "-", with: ""))-\(clock.replacingOccurrences(of: ":", with: ""))",
+                subtitle: "\(name) · \(check.zone?.name ?? "On site")",
+                status: "Present",
+                date: today,
+                fields: [
+                    "employee": name,
+                    "site": site,
+                    "block": block,
+                    "clockIn": clock,
+                    "clockOut": "",
+                    "hours": "",
+                    "latitude": String(format: "%.6f", latitude),
+                    "longitude": String(format: "%.6f", longitude),
+                    "accuracyMeters": "\(Int(accuracy.rounded()))",
+                    "verification": check.status,
+                    "verificationNote": check.note,
+                ]
+            ))
+            return "Checked in at \(clock) · \(check.status) · \(check.note)"
+        }
+        guard let open = openAttendanceToday() else { return "No open check-in found for today." }
+        let clockIn = recordField(open, "clockIn", "Clock in")
+        open.subtitle = "\(name) · out \(clock)"
+        open.fields["clockOut"] = clock
+        open.fields["hours"] = hoursBetween(clockIn, clock)
+        open.fields["latitude"] = String(format: "%.6f", latitude)
+        open.fields["longitude"] = String(format: "%.6f", longitude)
+        open.fields["accuracyMeters"] = "\(Int(accuracy.rounded()))"
+        open.fields["verification"] = check.status
+        persist()
+        notify()
+        return "Checked out at \(clock) · \(check.status)"
+    }
+
+    private func addPunchLog(kind: String, name: String, check: GeofenceCheck, latitude: Double, longitude: Double, accuracy: Double) {
+        insertRecord(ErpRecord(
+            id: newId(),
+            moduleId: "payroll",
+            entity: "Punch Log",
+            title: "Rejected \(kind) · \(nowClock())",
+            subtitle: name,
+            status: "Rejected",
+            date: todayIsoDate(),
+            fields: [
+                "employee": name,
+                "kind": kind,
+                "latitude": String(format: "%.6f", latitude),
+                "longitude": String(format: "%.6f", longitude),
+                "accuracyMeters": "\(Int(accuracy.rounded()))",
+                "verification": check.status,
+                "verificationNote": check.note,
+            ]
+        ))
+    }
 
     private func notify() { listeners.forEach { $0() } }
 
@@ -287,6 +385,10 @@ public final class ErpStore {
 
     public func addRecord(_ record: ErpRecord) {
         if let user, !canCreateEntity(user.role, record.moduleId, record.entity, definition: currentRole) { return }
+        insertRecord(record)
+    }
+
+    private func insertRecord(_ record: ErpRecord) {
         records.insert(record, at: 0)
         persist()
         notify()

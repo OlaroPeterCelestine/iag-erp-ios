@@ -70,14 +70,15 @@ public func erpModules() -> [ErpModule] {
         ErpModule(id: "pos", label: "POS", group: "Commercial", description: "Front-of-house restaurant POS: dine-in floor, KOTs, receipts, kitchen display, and shift close.", icon: "creditcard", color: 0xFF059669, entities: ["POS Terminal", "POS Locations", "POS Products", "POS Services", "POS Stock In", "Registers", "Cash Sessions", "Dining Tables", "Open Tickets", "POS Sales", "POS Returns", "Daily Closings"], seed: [
             seedRecord(module: "pos", entity: "POS Sales", title: "POS-20260824-0012", subtitle: "Front Till · Cash", status: "Paid", amount: 28_500),
         ]),
-        ErpModule(id: "payroll", label: "HR & Payroll", group: "People", description: "Employees, attendance, leave, payroll runs, payslips, and statutory remittances.", icon: "person.crop.rectangle", color: 0xFF7C3AED, entities: ["Employees", "Departments", "Sites", "Blocks", "Attendance", "Leave Requests", "Holidays", "Job Positions", "Onboarding", "Create Payroll", "Payroll Runs", "Payslip Items", "Payslips", "Recurring Payslips", "Statutory Remittances"], approvalEntities: ["Leave Requests"], seed: [
-            seedRecord(module: "payroll", entity: "Employees", title: "Sarah Nambi", subtitle: "Sales · EMP-014", status: "Active"),
-            seedRecord(module: "payroll", entity: "Employees", title: "Daniel Okello", subtitle: "Operations · EMP-022", status: "Active"),
-            seedRecord(module: "payroll", entity: "Sites", title: "IAG Head Office", subtitle: "Kampala · 150 m fence", status: "Active"),
-            seedRecord(module: "payroll", entity: "Sites", title: "Africa Coffee Park", subtitle: "Masaka · 250 m fence", status: "Active"),
-            seedRecord(module: "payroll", entity: "Blocks", title: "ACP Wet mill", subtitle: "Africa Coffee Park", status: "Active"),
+        ErpModule(id: "payroll", label: "HR & Payroll", group: "People", description: "Employees, attendance, leave, payroll runs, payslips, and statutory remittances.", icon: "person.crop.rectangle", color: 0xFF7C3AED, entities: ["Employees", "Departments", "Sites", "Blocks", "Attendance", "Punch Log", "Attendance Exceptions", "Attendance Summary", "Leave Requests", "Holidays", "Job Positions", "Onboarding", "Create Payroll", "Payroll Runs", "Payslip Items", "Payslips", "Recurring Payslips", "Statutory Remittances"], approvalEntities: ["Leave Requests"], seed: [
+            seedRecord(module: "payroll", entity: "Employees", title: "Sarah Nambi", subtitle: "Sales · EMP-014", status: "Active", fields: ["Department": "Sales"]),
+            seedRecord(module: "payroll", entity: "Employees", title: "Daniel Okello", subtitle: "Operations · EMP-022", status: "Active", fields: ["Department": "Operations"]),
+            seedRecord(module: "payroll", entity: "Sites", title: "IAG Head Office", subtitle: "Kampala · 150 m fence", status: "Active", fields: ["Code": "SITE-HQ", "Address": "Kampala", "Latitude": "0.347596", "Longitude": "32.582520", "Radius (m)": "150"]),
+            seedRecord(module: "payroll", entity: "Sites", title: "Africa Coffee Park", subtitle: "Masaka · 250 m fence", status: "Active", fields: ["Code": "SITE-ACP", "Address": "Masaka", "Latitude": "-0.341111", "Longitude": "31.736111", "Radius (m)": "250"]),
+            seedRecord(module: "payroll", entity: "Blocks", title: "ACP Wet mill", subtitle: "Africa Coffee Park", status: "Active", fields: ["Latitude": "-0.341111", "Longitude": "31.736111", "Radius (m)": "80"]),
             seedRecord(module: "payroll", entity: "Leave Requests", title: "LV-2026-009", subtitle: "Sarah Nambi · annual", status: "Pending"),
         ]),
+        ErpModule(id: "clock-in", label: "Clock In", group: "People", description: "Geofence clock-in and clock-out for every staff login — same Sites and Blocks as HR.", icon: "clock", color: 0xFFEA580C, entities: ["Clock In", "My punches", "Punch Log"], seed: []),
         ErpModule(id: "investments", label: "Investments", group: "Accounting", description: "Investment holdings and related accounting.", icon: "chart.pie", color: 0xFF0F766E, entities: ["Investments"]),
         ErpModule(id: "assets", label: "Fixed Assets", group: "Accounting", description: "Fixed and intangible assets, depreciation, amortization, and leases.", icon: "building.2", color: 0xFF1D4ED8, entities: ["Fixed Assets", "Depreciation Entries", "Intangible Assets", "Amortization Entries", "Leases"], seed: [
             seedRecord(module: "assets", entity: "Fixed Assets", title: "Probat roaster P12", subtitle: "FA-ROAST-01", status: "Active", amount: 310_000_000),
@@ -135,6 +136,7 @@ public func sampleRecord(module: ErpModule, entity: String) -> ErpRecord {
 
 public func completeCatalogSeed(_ modules: [ErpModule] = erpModules()) -> [ErpRecord] {
     modules.flatMap { module in
+        if module.id == "clock-in" { return [] }
         let grouped = Dictionary(grouping: module.seed, by: \.entity)
         return module.entities.flatMap { entity -> [ErpRecord] in
             if let rows = grouped[entity], !rows.isEmpty { return rows }

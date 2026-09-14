@@ -288,12 +288,12 @@ public func canAccessModule(_ role: String?, _ slug: String, definition: RoleDef
     let pages = definition?.pagePermissions ?? [:]
     if let granted = pages[slug] { return granted.view }
     if let wild = pages[pageWildcardKey] { return wild.view }
-    if isContractorRole(role) { return contractorModules.contains(slug) }
+    if isContractorRole(role) && slug != "clock-in" { return contractorModules.contains(slug) }
     let crud = crudForRole(role, definition: definition)
-    if explicitGrantModules.contains(slug) { return false }
-    if slug == "requests" || slug == "general-requests" || slug == "oral-payment-requests" {
+    if slug == "clock-in" || slug == "requests" || slug == "general-requests" || slug == "oral-payment-requests" {
         return crud.view
     }
+    if explicitGrantModules.contains(slug) { return false }
     if !crud.view { return false }
     switch slug {
     case "payroll": return crud.create && crud.edit
@@ -306,6 +306,7 @@ public func canAccessModule(_ role: String?, _ slug: String, definition: RoleDef
 
 public func canCreateIn(_ role: String?, _ moduleId: String, definition: RoleDefinition? = nil) -> Bool {
     guard canAccessModule(role, moduleId, definition: definition) else { return false }
+    if moduleId == "clock-in" { return true }
     let pages = definition?.pagePermissions ?? [:]
     if let granted = pages[moduleId] { return granted.create }
     if let wild = pages[pageWildcardKey] { return wild.create }
@@ -358,7 +359,7 @@ public func canAccessSpecialNav(_ role: String?, _ key: String, definition: Role
     if let granted = pages[key] { return granted.view }
     let crud = crudForRole(role, definition: definition)
     switch key {
-    case "dashboard", "trace", "guides", "qna", "release-notes", "templates", "comms", "accounting-documents", "payment-requests":
+    case "dashboard", "trace", "clock-in", "guides", "qna", "release-notes", "templates", "comms", "accounting-documents", "payment-requests":
         return crud.view
     default:
         return false
