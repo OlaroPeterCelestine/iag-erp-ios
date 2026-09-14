@@ -132,6 +132,17 @@ public final class ErpRecord: Equatable {
     }
 }
 
+public struct WelcomeStat: Equatable, Identifiable, Sendable {
+    public var id: String
+    public var label: String
+    public var value: String
+    public init(id: String, label: String, value: String) {
+        self.id = id
+        self.label = label
+        self.value = value
+    }
+}
+
 public struct Kpi: Equatable, Sendable {
     public var label: String
     public var value: String
@@ -247,6 +258,57 @@ public let departmentGroups = [
     "Operations", "Quality", "People", "Accounting", "Records",
 ]
 
+public struct SuiteApp: Equatable, Identifiable, Sendable {
+    public var id: String
+    public var label: String
+    public var description: String
+    public var moduleIds: [String]
+    public var icon: String
+    public var color: UInt32
+}
+
+public let suiteApps: [SuiteApp] = [
+    SuiteApp(id: "finance", label: "Finance", description: "Banking, receipts, claims, accounts, reports, assets, capital, and investments.", moduleIds: ["banking", "receipts-payments", "expense-claims", "accounts", "reports", "investments", "assets", "capital"], icon: "banknote", color: 0xFF0369A1),
+    SuiteApp(id: "procurement", label: "Procurement", description: "Suppliers, purchase documents, goods receipts, and inventory.", moduleIds: ["purchases", "inventory"], icon: "cart", color: 0xFF2563EB),
+    SuiteApp(id: "production", label: "Production", description: "Plans, machines, batches, roast, packaging, downtime, and yield.", moduleIds: ["production"], icon: "gearshape.2", color: 0xFFB45309),
+    SuiteApp(id: "security", label: "Security", description: "Gate passes, visitor passes, and security incidents.", moduleIds: ["security"], icon: "shield.checkered", color: 0xFF334155),
+    SuiteApp(id: "hr", label: "HR & Payroll", description: "Employees, attendance, leave, payroll runs, and payslips.", moduleIds: ["payroll"], icon: "person.2", color: 0xFF7C3AED),
+    SuiteApp(id: "projects", label: "Projects", description: "Projects, Gantt, IPC, materials, and contractor contracts.", moduleIds: ["projects", "contract-manager"], icon: "briefcase", color: 0xFF4F46E5),
+    SuiteApp(id: "fleet", label: "Fleet", description: "Vehicles, drivers, fuel, trips, and maintenance.", moduleIds: ["fleet"], icon: "truck.box", color: 0xFFD97706),
+    SuiteApp(id: "sales", label: "Sales", description: "Customers, invoices, CRM, and restaurant POS.", moduleIds: ["sales", "crm", "pos"], icon: "storefront", color: 0xFF059669),
+    SuiteApp(id: "logistics", label: "Logistics", description: "Shipments, dispatch, routes, distribution, and deliveries.", moduleIds: ["logistics", "distribution"], icon: "shippingbox", color: 0xFF0F766E),
+    SuiteApp(id: "quality", label: "Quality", description: "R&D, lab, QA, and work-system benchmarks.", moduleIds: ["rnd", "lab", "qa", "benchmark"], icon: "flask", color: 0xFF6D28D9),
+    SuiteApp(id: "requests", label: "Requests", description: "General and oral payment requests through the approval desks.", moduleIds: ["general-requests", "oral-payment-requests"], icon: "list.clipboard", color: 0xFF7C3AED),
+    SuiteApp(id: "records", label: "Records", description: "Folders, attachments, history, and deleted records.", moduleIds: ["folders", "documents"], icon: "folder", color: 0xFFA16207),
+]
+
+public func suiteAppById(_ id: String?) -> SuiteApp? {
+    guard let id, !id.isEmpty else { return nil }
+    return suiteApps.first { $0.id == id }
+}
+
+public func suiteAppContaining(_ moduleId: String) -> SuiteApp? {
+    suiteApps.first { $0.moduleIds.contains(moduleId) }
+}
+
+public func canOpenSuiteApp(_ role: String?, _ appId: String, definition: RoleDefinition? = nil) -> Bool {
+    guard let app = suiteAppById(appId) else { return false }
+    return app.moduleIds.contains { canAccessModule(role, $0, definition: definition) }
+}
+
+public func defaultSuiteAppForRole(_ role: String?) -> String? {
+    if isAdminRole(role) { return nil }
+    if isContractorRole(role) { return "projects" }
+    switch normalizeRole(role) {
+    case "quantity surveyor", "project manager": return "projects"
+    case "procurement", "stores manager": return "procurement"
+    case "hr", "human resources": return "hr"
+    case "accountant", "accounts assistant", "accounts", "finance", "clerk": return "finance"
+    case "viewer": return "finance"
+    default: return nil
+    }
+}
+
 public let workspaceGroups = ["Command", "Records", "Requests", "People", "Help", "Admin"]
 
 public struct SearchHit: Equatable, Identifiable {
@@ -304,6 +366,89 @@ public let workspaceTools: [WorkspaceTool] = [
     WorkspaceTool(id: "activity-logs", label: "Activity", group: "Admin", description: "Who changed records.", adminOnly: true),
     WorkspaceTool(id: "system-health", label: "System health", group: "Admin", description: "Local store, roles, and record counts.", adminOnly: true),
     WorkspaceTool(id: "settings", label: "Settings", group: "Admin", description: "Theme and workspace options.", adminOnly: true),
+]
+
+public enum QuickActionKind: String, Sendable {
+    case create, list, clock, approvals, access
+}
+
+public struct QuickAction: Equatable, Identifiable, Sendable {
+    public var id: String
+    public var label: String
+    public var icon: String
+    public var color: UInt32
+    public var kind: QuickActionKind
+    public var appId: String?
+    public var moduleId: String
+    public var entity: String?
+
+    public init(
+        id: String,
+        label: String,
+        icon: String,
+        color: UInt32,
+        kind: QuickActionKind,
+        appId: String? = nil,
+        moduleId: String,
+        entity: String? = nil
+    ) {
+        self.id = id
+        self.label = label
+        self.icon = icon
+        self.color = color
+        self.kind = kind
+        self.appId = appId
+        self.moduleId = moduleId
+        self.entity = entity
+    }
+}
+
+public let quickActionCatalog: [QuickAction] = [
+    QuickAction(id: "clock", label: "Clock in", icon: "clock.fill", color: 0xFF047857, kind: .clock, moduleId: "clock-in"),
+    QuickAction(id: "approvals", label: "Approvals", icon: "checkmark.rectangle.fill", color: 0xFFC47820, kind: .approvals, moduleId: "general-requests"),
+    QuickAction(id: "access", label: "Users", icon: "shield.checkered", color: 0xFF334155, kind: .access, moduleId: "payroll"),
+    QuickAction(id: "receipt", label: "Receipt", icon: "arrow.down.circle", color: 0xFF0F766E, kind: .create, appId: "finance", moduleId: "receipts-payments", entity: "Receipts"),
+    QuickAction(id: "payment", label: "Payment", icon: "arrow.up.circle", color: 0xFF0369A1, kind: .create, appId: "finance", moduleId: "receipts-payments", entity: "Payments"),
+    QuickAction(id: "claim", label: "Claim", icon: "receipt", color: 0xFFB45309, kind: .create, appId: "finance", moduleId: "expense-claims", entity: "Expense Claims"),
+    QuickAction(id: "journal", label: "Journal", icon: "book", color: 0xFF0F172A, kind: .create, appId: "finance", moduleId: "accounts", entity: "Journal Entries"),
+    QuickAction(id: "reports", label: "Reports", icon: "chart.bar", color: 0xFF0369A1, kind: .list, appId: "finance", moduleId: "reports", entity: "Balance Sheet"),
+    QuickAction(id: "transfer", label: "Transfer", icon: "arrow.left.arrow.right", color: 0xFF0369A1, kind: .create, appId: "finance", moduleId: "banking", entity: "Inter Account Transfers"),
+    QuickAction(id: "po", label: "New PO", icon: "cart.fill", color: 0xFF2563EB, kind: .create, appId: "procurement", moduleId: "purchases", entity: "Purchase Orders"),
+    QuickAction(id: "grn", label: "GRN", icon: "shippingbox", color: 0xFF0E7490, kind: .create, appId: "procurement", moduleId: "purchases", entity: "Goods Receipts"),
+    QuickAction(id: "supplier", label: "Supplier", icon: "person.2", color: 0xFF2563EB, kind: .create, appId: "procurement", moduleId: "purchases", entity: "Suppliers"),
+    QuickAction(id: "item", label: "Item", icon: "cube.box", color: 0xFF0E7490, kind: .create, appId: "procurement", moduleId: "inventory", entity: "Inventory Items"),
+    QuickAction(id: "prod-order", label: "Order", icon: "gearshape.2", color: 0xFFB45309, kind: .create, appId: "production", moduleId: "production", entity: "Production Orders"),
+    QuickAction(id: "batch", label: "Batch", icon: "square.stack.3d.up", color: 0xFFB45309, kind: .create, appId: "production", moduleId: "production", entity: "Batch Records"),
+    QuickAction(id: "roast", label: "Roast", icon: "flame", color: 0xFFC2410C, kind: .create, appId: "production", moduleId: "production", entity: "Roast Batches"),
+    QuickAction(id: "downtime", label: "Down", icon: "pause.circle", color: 0xFF57534E, kind: .create, appId: "production", moduleId: "production", entity: "Downtime Logs"),
+    QuickAction(id: "gate", label: "Gate", icon: "lock.open", color: 0xFF334155, kind: .create, appId: "security", moduleId: "security", entity: "Gate Passes"),
+    QuickAction(id: "visitor", label: "Visitor", icon: "person.badge.plus", color: 0xFF334155, kind: .create, appId: "security", moduleId: "security", entity: "Visitor Passes"),
+    QuickAction(id: "incident", label: "Incident", icon: "exclamationmark.triangle", color: 0xFFB91C1C, kind: .create, appId: "security", moduleId: "security", entity: "Security Incidents"),
+    QuickAction(id: "leave", label: "Leave", icon: "calendar", color: 0xFF7C3AED, kind: .create, appId: "hr", moduleId: "payroll", entity: "Leave Requests"),
+    QuickAction(id: "employee", label: "Staff", icon: "person.crop.rectangle", color: 0xFF7C3AED, kind: .create, appId: "hr", moduleId: "payroll", entity: "Employees"),
+    QuickAction(id: "payroll", label: "Payroll", icon: "banknote", color: 0xFF7C3AED, kind: .create, appId: "hr", moduleId: "payroll", entity: "Payroll Runs"),
+    QuickAction(id: "project", label: "Project", icon: "briefcase", color: 0xFF4F46E5, kind: .create, appId: "projects", moduleId: "projects", entity: "New Project"),
+    QuickAction(id: "ipc", label: "IPC", icon: "doc.badge.plus", color: 0xFF4F46E5, kind: .create, appId: "projects", moduleId: "projects", entity: "Payment Requests (IPC)"),
+    QuickAction(id: "material", label: "Material", icon: "hammer", color: 0xFF4F46E5, kind: .create, appId: "projects", moduleId: "projects", entity: "Material Requests"),
+    QuickAction(id: "contractor", label: "Contractor", icon: "person.badge.shield.checkmark", color: 0xFF047857, kind: .create, appId: "projects", moduleId: "contract-manager", entity: "Contractors"),
+    QuickAction(id: "fuel", label: "Fuel", icon: "fuelpump", color: 0xFFD97706, kind: .create, appId: "fleet", moduleId: "fleet", entity: "Fuel Requests"),
+    QuickAction(id: "trip", label: "Trip", icon: "map", color: 0xFFD97706, kind: .create, appId: "fleet", moduleId: "fleet", entity: "Trip Requests"),
+    QuickAction(id: "maintenance", label: "Service", icon: "wrench.and.screwdriver", color: 0xFFD97706, kind: .create, appId: "fleet", moduleId: "fleet", entity: "Maintenance Requests"),
+    QuickAction(id: "vehicle", label: "Vehicle", icon: "truck.box", color: 0xFFD97706, kind: .create, appId: "fleet", moduleId: "fleet", entity: "Vehicles"),
+    QuickAction(id: "invoice", label: "Invoice", icon: "doc.text.fill", color: 0xFF059669, kind: .create, appId: "sales", moduleId: "sales", entity: "Sales Invoices"),
+    QuickAction(id: "customer", label: "Customer", icon: "person.crop.circle.badge.plus", color: 0xFF059669, kind: .create, appId: "sales", moduleId: "sales", entity: "Customers"),
+    QuickAction(id: "quote", label: "Quote", icon: "doc.plaintext", color: 0xFF059669, kind: .create, appId: "sales", moduleId: "sales", entity: "Sales Quotes"),
+    QuickAction(id: "lead", label: "Lead", icon: "star", color: 0xFFBE123C, kind: .create, appId: "sales", moduleId: "crm", entity: "Leads"),
+    QuickAction(id: "shipment", label: "Ship", icon: "shippingbox.fill", color: 0xFF0F766E, kind: .create, appId: "logistics", moduleId: "logistics", entity: "Shipments"),
+    QuickAction(id: "dispatch", label: "Dispatch", icon: "list.bullet.rectangle", color: 0xFF0F766E, kind: .list, appId: "logistics", moduleId: "logistics", entity: "Dispatch Board"),
+    QuickAction(id: "delivery", label: "Deliver", icon: "bicycle", color: 0xFF0D9488, kind: .create, appId: "logistics", moduleId: "distribution", entity: "Delivery Runs"),
+    QuickAction(id: "lab", label: "Lab", icon: "testtube.2", color: 0xFF6D28D9, kind: .create, appId: "quality", moduleId: "lab", entity: "Lab Requests"),
+    QuickAction(id: "qa", label: "QA", icon: "checkmark.seal", color: 0xFF0369A1, kind: .create, appId: "quality", moduleId: "qa", entity: "Quality Checks"),
+    QuickAction(id: "nc", label: "NC", icon: "xmark.octagon", color: 0xFFB91C1C, kind: .create, appId: "quality", moduleId: "qa", entity: "Non-conformances"),
+    QuickAction(id: "gen-request", label: "Request", icon: "list.clipboard", color: 0xFF7C3AED, kind: .create, appId: "requests", moduleId: "general-requests", entity: "General Requests"),
+    QuickAction(id: "oral", label: "Oral pay", icon: "mic", color: 0xFFC2410C, kind: .create, appId: "requests", moduleId: "oral-payment-requests", entity: "Oral Payment Requests"),
+    QuickAction(id: "folder", label: "Folder", icon: "folder.badge.plus", color: 0xFFA16207, kind: .create, appId: "records", moduleId: "folders", entity: "Folders"),
+    QuickAction(id: "attachment", label: "File", icon: "paperclip", color: 0xFF57534E, kind: .list, appId: "records", moduleId: "documents", entity: "Attachments"),
 ]
 
 public let defaultKpis: [Kpi] = [

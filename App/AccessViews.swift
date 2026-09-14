@@ -20,6 +20,7 @@ struct AccessView: View {
                 if tab == 0 { RolesPanel() } else { UsersPanel() }
             }
         }
+        .iagCanvas()
         .navigationTitle("Access")
     }
 }
@@ -154,11 +155,13 @@ struct ProfileView: View {
             Button("Save profile") {
                 message = box.store.updateProfile(name: name, email: email, phone: phone, title: title) ?? "Saved."
             }
-            Button(box.store.themeMode == "dark" ? "Use light theme" : "Use dark theme") {
-                box.store.setThemeMode(box.store.themeMode == "dark" ? "light" : "dark")
+            Button("Theme: \(box.store.themeMode == "dark" ? "Dark" : box.store.themeMode == "light" ? "Light" : "System")") {
+                let next = box.store.themeMode == "system" ? "light" : box.store.themeMode == "light" ? "dark" : "system"
+                box.store.setThemeMode(next)
             }
             Button("Sign out", role: .destructive) { box.store.logout() }
         }
+        .iagCanvas()
         .navigationTitle("Account")
         .onAppear {
             name = user?.name ?? ""

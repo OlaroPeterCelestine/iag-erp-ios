@@ -13,6 +13,7 @@ The marketing version in the Xcode target (`1.0.0`) is the source of truth.
 
 - Every web ERP desk and feature on the phone: Home lists all departments, each desk opens a feature list, plus Trace and the other workspace tools
 - Clock In tab for every signed-in login: GPS punch against HR Sites and Blocks, with a Head Office demo pin for the simulator
+- Separate full apps after sign-in: Finance, Procurement, Production, Security, HR, Projects, Fleet, Sales, Logistics, Quality, Requests, and Records
 
 ## [1.0.0] - 2026-09-14
 

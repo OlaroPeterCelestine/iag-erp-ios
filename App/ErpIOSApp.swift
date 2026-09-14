@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import ErpCore
 
 @main
@@ -9,6 +10,7 @@ struct ErpIOSApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(box)
+                .tint(IagTheme.orange)
         }
     }
 }
@@ -43,6 +45,21 @@ struct RootView: View {
     }
 }
 
+enum IagTheme {
+    static let orange = Color(red: 249 / 255, green: 115 / 255, blue: 22 / 255)
+    static let success = Color(red: 5 / 255, green: 150 / 255, blue: 105 / 255)
+    static let canvas = Color(.systemGroupedBackground)
+    static let card = Color(.secondarySystemGroupedBackground)
+    static let muted = Color.secondary
+}
+
+func iagGreeting() -> String {
+    let hour = Calendar.current.component(.hour, from: Date())
+    if hour < 12 { return "Good morning" }
+    if hour < 17 { return "Good afternoon" }
+    return "Good evening"
+}
+
 func iagColor(_ hex: UInt32) -> Color {
     Color(
         red: Double((hex >> 16) & 0xFF) / 255,
@@ -54,13 +71,220 @@ func iagColor(_ hex: UInt32) -> Color {
 func statusColor(_ status: String) -> Color {
     let s = status.lowercased()
     if ["paid", "approved", "active", "released", "closed", "verified", "present", "posted", "cleared"].contains(where: { s.contains($0) }) {
-        return Color(red: 5 / 255, green: 150 / 255, blue: 105 / 255)
+        return IagTheme.success
     }
     if ["overdue", "reject", "void", "cancel", "outside"].contains(where: { s.contains($0) }) {
-        return Color(red: 185 / 255, green: 28 / 255, blue: 28 / 255)
+        return Color.red
     }
     if ["pending", "open", "draft", "held", "flagged", "submitted"].contains(where: { s.contains($0) }) {
-        return Color(red: 249 / 255, green: 115 / 255, blue: 22 / 255)
+        return IagTheme.orange
     }
-    return .secondary
+    return IagTheme.muted
+}
+
+struct IagMark: View {
+    var size: CGFloat = 56
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(IagTheme.orange)
+            Text("IAG")
+                .font(.system(size: size * 0.28, weight: .bold))
+                .foregroundStyle(.white)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+struct IagIconWell: View {
+    var systemName: String
+    var color: Color = IagTheme.orange
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(color.opacity(0.12))
+            Image(systemName: systemName)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(color)
+        }
+        .frame(width: 36, height: 36)
+    }
+}
+
+struct StatusPill: View {
+    var text: String
+    var body: some View {
+        Text(text)
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .foregroundStyle(statusColor(text))
+            .background(statusColor(text).opacity(0.12), in: Capsule())
+    }
+}
+
+struct DeskRow: View {
+    var title: String
+    var subtitle: String
+    var systemName: String = "square.grid.2x2"
+    var color: Color = IagTheme.orange
+    var status: String? = nil
+
+    var body: some View {
+        HStack(spacing: 12) {
+            IagIconWell(systemName: systemName, color: color)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.body.weight(.semibold))
+                Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            }
+            Spacer(minLength: 8)
+            if let status { StatusPill(text: status) }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+struct AppTile: View {
+    let app: SuiteApp
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            IagIconWell(systemName: app.icon, color: iagColor(app.color))
+            Text(app.label)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+            Text(app.description)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 128, alignment: .topLeading)
+        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+struct QuickActionButton: View {
+    let action: QuickAction
+    var badge: Int = 0
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ZStack(alignment: .topTrailing) {
+                Circle()
+                    .fill(IagTheme.orange.opacity(0.12))
+                    .frame(width: 52, height: 52)
+                    .overlay {
+                        Image(systemName: action.icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(IagTheme.orange)
+                    }
+                if badge > 0 {
+                    Text(badge > 9 ? "9+" : "\(badge)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(minWidth: 16, minHeight: 16)
+                        .padding(.horizontal, 3)
+                        .background(Color.red, in: Capsule())
+                        .offset(x: 4, y: -2)
+                }
+            }
+            Text(action.label)
+                .font(.caption2)
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 72)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct KpiChip: View {
+    let kpi: Kpi
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(kpi.label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(kpi.value)
+                .font(.subheadline.weight(.semibold))
+            Text(kpi.hint)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .padding(12)
+        .frame(minWidth: 132, alignment: .leading)
+        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+struct WelcomeCard: View {
+    var name: String
+    var subtitle: String
+    var stats: [WelcomeStat]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Welcome back")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.85))
+                Text("\(iagGreeting()), \(name)")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+            HStack(alignment: .top, spacing: 8) {
+                ForEach(stats) { stat in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(stat.value)
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(.white)
+                        Text(stat.label)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(IagTheme.orange, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+struct GreetingHeader: View {
+    var name: String
+    var subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("\(iagGreeting()), \(name)")
+                .font(.title2.weight(.semibold))
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+extension View {
+    func iagCanvas() -> some View {
+        self
+            .scrollContentBackground(.hidden)
+            .background(IagTheme.canvas.ignoresSafeArea())
+    }
+
+    func iagCard() -> some View {
+        self.background(IagTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
 }

@@ -17,7 +17,7 @@ Native SwiftUI Finance ERP for iPhone and iPad: every department desk, records, 
 
 ## What this app is
 
-The native iOS Finance ERP. `ErpCore` is the RBAC + records host. The SwiftUI shell is Home, Departments, Clock, Approvals, Workspace, Access, and Account. Every web ERP desk and feature is on the phone, plus a Clock In module that any signed-in login can punch. Administrators create **custom roles** with a page matrix (optional `*`), then assign them on Users.
+The native iOS Finance ERP. `ErpCore` is the RBAC + records host. After sign-in you open a full app — Finance, Procurement, Production, Security, and the rest — instead of one mixed desk list. Clock In is on every login. Administrators create **custom roles** with a page matrix (optional `*`), then assign them on Users.
 
 ## Who it is for
 
@@ -25,7 +25,8 @@ Anyone who already has a Finance role: admin, accountant, clerk, viewer, HR, HOD
 
 ## What you can do
 
-- Home: balance-sheet snapshot, search across desks/features/records, then every department you can open.
+- Home: the desks in the app you opened (Finance shows banking and reports, Security shows gate passes, …).
+- Apps: switch to another full tool without signing out. Admin lands on the app grid; HR, Procurement, and contractors open their own app.
 - Clock: GPS clock-in / clock-out against HR Sites and Blocks. Clerk, viewer, and contractor can punch without opening the HR desk.
 - Departments: Banking through Reports, grouped like the web sidebar. Open a desk to see **every feature** (customers, invoices, lots, reports, …).
 - Records: open a document, create a draft, submit, approve/reject, void (where the desk allows).

@@ -14,6 +14,7 @@ public final class ErpStore {
     public var search: String = ""
     public private(set) var booted = false
     public private(set) var activeDepartmentId: String?
+    public private(set) var activeAppId: String?
     public private(set) var themeMode: String = "system"
     private var passwords: [String: String] = [:]
 
@@ -28,11 +29,25 @@ public final class ErpStore {
     public var currentRole: RoleDefinition? { roleOf(roleName) }
     public var kpis: [Kpi] { defaultKpis }
     public var visibleModules: [ErpModule] { modules.filter { canAccessModule(roleName, $0.id, definition: currentRole) } }
+    public var visibleSuiteApps: [SuiteApp] {
+        suiteApps.filter { canOpenSuiteApp(roleName, $0.id, definition: currentRole) }
+    }
+    public var activeSuiteApp: SuiteApp? { suiteAppById(activeAppId) }
+    public var appModules: [ErpModule] {
+        guard let app = activeSuiteApp else { return visibleModules }
+        return visibleModules.filter { app.moduleIds.contains($0.id) }
+    }
+    public var appPendingApprovals: [ErpRecord] {
+        guard activeSuiteApp != nil else { return pendingApprovals }
+        let ids = Set(appModules.map(\.id))
+        return pendingApprovals.filter { ids.contains($0.moduleId) }
+    }
     public var visibleWorkspaceTools: [WorkspaceTool] {
         workspaceTools.filter { canAccessSpecialNav(roleName, $0.id, definition: currentRole) }
     }
     public var approvalEntities: Set<String> { Set(modules.flatMap(\.approvalEntities)) }
     public var canApprove: Bool { canAccessApprovalDesk(roleName) }
+    public var canClockIn: Bool { user != nil && crudForRole(roleName, definition: currentRole).view }
     public var customRoles: [RoleDefinition] { roles.filter { !$0.system } }
     public var pendingApprovals: [ErpRecord] { pendingApprovalsFor(nil) }
     public var recent: [ErpRecord] { Array(records.prefix(8)) }
@@ -40,6 +55,61 @@ public final class ErpStore {
         let needles = ["invoice", "quote", "order", "note", "receipt", "payment", "payslip", "journal", "transfer", "claim", "request"]
         return records.filter { rec in
             canOpen(rec.moduleId) && needles.contains { rec.entity.lowercased().contains($0) }
+        }
+    }
+
+    public var homeQuickActions: [QuickAction] {
+        Array(quickActionCatalog.filter { action in
+            if let appId = action.appId {
+                guard activeAppId == appId else { return false }
+            } else {
+                guard activeAppId != nil else { return false }
+            }
+            return allowsQuickAction(action)
+        }.prefix(8))
+    }
+
+    public var launcherQuickActions: [QuickAction] {
+        quickActionCatalog.filter { $0.appId == nil && allowsQuickAction($0) }
+    }
+
+    public var welcomeStats: [WelcomeStat] {
+        let scoped = records.filter { rec in
+            guard canOpen(rec.moduleId) else { return false }
+            if let app = activeSuiteApp { return app.moduleIds.contains(rec.moduleId) }
+            return true
+        }
+        var stats: [WelcomeStat] = []
+        if activeAppId == nil {
+            stats.append(WelcomeStat(id: "apps", label: "Apps", value: "\(visibleSuiteApps.count)"))
+        } else {
+            stats.append(WelcomeStat(id: "desks", label: "Desks", value: "\(appModules.count)"))
+        }
+        stats.append(WelcomeStat(id: "records", label: "Records", value: "\(scoped.count)"))
+        if canApprove {
+            let pending = activeAppId == nil ? pendingApprovals.count : appPendingApprovals.count
+            stats.append(WelcomeStat(id: "todo", label: "To do", value: "\(pending)"))
+        }
+        if canClockIn {
+            stats.append(WelcomeStat(id: "clock", label: "Clock", value: openAttendanceToday() == nil ? "Out" : "In"))
+        }
+        return Array(stats.prefix(4))
+    }
+
+    public func allowsQuickAction(_ action: QuickAction) -> Bool {
+        switch action.kind {
+        case .clock:
+            return canClockIn
+        case .approvals:
+            return canApprove
+        case .access:
+            return isAdmin
+        case .create:
+            guard canOpen(action.moduleId) else { return false }
+            if let entity = action.entity { return canCreate(action.moduleId, entity) }
+            return canCreate(action.moduleId)
+        case .list:
+            return canOpen(action.moduleId)
         }
     }
 
@@ -57,7 +127,7 @@ public final class ErpStore {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard q.count >= 2 else { return [] }
         var hits: [SearchHit] = []
-        for module in visibleModules {
+        for module in appModules {
             if module.label.lowercased().contains(q) || module.description.lowercased().contains(q) {
                 hits.append(SearchHit(kind: .module, title: module.label, subtitle: module.group, moduleId: module.id))
             }
@@ -69,6 +139,7 @@ public final class ErpStore {
             hits.append(SearchHit(kind: .tool, title: tool.label, subtitle: tool.group, moduleId: tool.id))
         }
         for rec in records where canOpen(rec.moduleId) {
+            if activeSuiteApp != nil && !appModules.contains(where: { $0.id == rec.moduleId }) { continue }
             if rec.title.lowercased().contains(q) || rec.subtitle.lowercased().contains(q) || rec.entity.lowercased().contains(q) {
                 hits.append(SearchHit(kind: .record, title: rec.title, subtitle: "\(rec.entity) · \(rec.status)", moduleId: rec.moduleId, entity: rec.entity, recordId: rec.id))
             }
@@ -76,8 +147,6 @@ public final class ErpStore {
         }
         return Array(hits.prefix(30))
     }
-
-    public var canClockIn: Bool { user != nil && crudForRole(roleName, definition: currentRole).view }
 
     public func geofenceZones() -> [GeofenceZone] {
         let sites = forEntity("payroll", "Sites").compactMap { zoneFromRecord($0, kind: "site") }
@@ -231,6 +300,14 @@ public final class ErpStore {
         if let userJSON = j["user"] as? [String: Any] { user = AuthUser.fromJSON(userJSON) }
         let dept = j["activeDepartmentId"] as? String
         activeDepartmentId = (dept?.isEmpty ?? true) || moduleById(dept ?? "") == nil ? nil : dept
+        let app = j["activeAppId"] as? String
+        if let app, suiteAppById(app) != nil {
+            activeAppId = app
+        } else if let dept = activeDepartmentId {
+            activeAppId = suiteAppContaining(dept)?.id
+        } else {
+            activeAppId = nil
+        }
         if let pw = j["passwords"] as? [String: Any] {
             passwords = Dictionary(uniqueKeysWithValues: pw.map { ($0.key.lowercased(), "\($0.value)") })
         }
@@ -256,6 +333,7 @@ public final class ErpStore {
         ]
         json["user"] = user?.toJSON() ?? NSNull()
         json["activeDepartmentId"] = activeDepartmentId ?? NSNull()
+        json["activeAppId"] = activeAppId ?? NSNull()
         if JSONSerialization.isValidJSONObject(json),
            let data = try? JSONSerialization.data(withJSONObject: json),
            let raw = String(data: data, encoding: .utf8) {
@@ -296,20 +374,43 @@ public final class ErpStore {
         let u = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard let nextUser = accountFor(u) else { return "Unknown user." }
         if password != passwordFor(u) { return "Wrong password." }
-        let dept = departmentId?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let dept, !dept.isEmpty, moduleById(dept) == nil { return "Unknown department." }
-        var nextDept = (dept?.isEmpty ?? true) ? nil : dept
-        if let nextDept, !roleCanOpen(nextUser.role, nextDept) { return "Your role cannot open that app." }
+        let requested = departmentId?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let def = findRoleDefinition(roles, nextUser.role)
+        var nextApp: String?
+        var nextDept: String?
+        if let requested, !requested.isEmpty {
+            if suiteAppById(requested) != nil {
+                if !canOpenSuiteApp(nextUser.role, requested, definition: def) { return "Your role cannot open that app." }
+                nextApp = requested
+            } else if moduleById(requested) != nil {
+                if !roleCanOpen(nextUser.role, requested) { return "Your role cannot open that app." }
+                nextApp = suiteAppContaining(requested)?.id
+                nextDept = requested
+            } else {
+                return "Unknown department."
+            }
+        }
+        if nextApp == nil {
+            let homeApp = defaultSuiteAppForRole(nextUser.role)
+            if let homeApp, canOpenSuiteApp(nextUser.role, homeApp, definition: def) {
+                nextApp = homeApp
+            } else {
+                let visible = suiteApps.filter { canOpenSuiteApp(nextUser.role, $0.id, definition: def) }
+                if visible.count == 1 { nextApp = visible[0].id }
+            }
+        }
+        if nextDept == nil, let nextApp, let app = suiteAppById(nextApp) {
+            nextDept = app.moduleIds.first { roleCanOpen(nextUser.role, $0) }
+        }
         if nextDept == nil {
             let home = defaultDepartmentForRole(nextUser.role)
             if let home, moduleById(home) != nil, roleCanOpen(nextUser.role, home) {
                 nextDept = home
-            } else {
-                let visible = modules.filter { roleCanOpen(nextUser.role, $0.id) }.map(\.id)
-                if visible.count == 1 { nextDept = visible[0] }
+                if nextApp == nil { nextApp = suiteAppContaining(home)?.id }
             }
         }
         user = nextUser
+        activeAppId = nextApp
         activeDepartmentId = nextDept
         persist()
         notify()
@@ -349,6 +450,22 @@ public final class ErpStore {
         notify()
     }
 
+    public func openApp(_ appId: String) {
+        guard canOpenSuiteApp(roleName, appId, definition: currentRole) else { return }
+        activeAppId = appId
+        if let app = suiteAppById(appId) {
+            activeDepartmentId = app.moduleIds.first { canOpen($0) }
+        }
+        persist()
+        notify()
+    }
+
+    public func closeApp() {
+        activeAppId = nil
+        persist()
+        notify()
+    }
+
     public func setActiveDepartment(_ departmentId: String?) {
         let dept = departmentId?.trimmingCharacters(in: .whitespacesAndNewlines)
         if dept == nil || dept?.isEmpty == true || moduleById(dept ?? "") == nil {
@@ -357,21 +474,32 @@ public final class ErpStore {
             return
         } else {
             activeDepartmentId = dept
+            if let app = suiteAppContaining(dept!) { activeAppId = app.id }
         }
         persist()
         notify()
     }
 
     private func enforceAccess() {
-        guard let current = user, let dept = activeDepartmentId else { return }
-        if moduleById(dept) != nil && roleCanOpen(current.role, dept) { return }
+        guard let current = user else { return }
+        if let appId = activeAppId, !canOpenSuiteApp(current.role, appId, definition: roleOf(current.role)) {
+            activeAppId = defaultSuiteAppForRole(current.role)
+        }
+        if let dept = activeDepartmentId, moduleById(dept) != nil && roleCanOpen(current.role, dept) {
+            if activeAppId == nil { activeAppId = suiteAppContaining(dept)?.id }
+            return
+        }
         let home = defaultDepartmentForRole(current.role)
         activeDepartmentId = (home != nil && moduleById(home!) != nil && roleCanOpen(current.role, home!)) ? home : nil
+        if activeAppId == nil, let dept = activeDepartmentId {
+            activeAppId = suiteAppContaining(dept)?.id
+        }
     }
 
     public func logout() {
         user = nil
         activeDepartmentId = nil
+        activeAppId = nil
         persist()
         notify()
     }

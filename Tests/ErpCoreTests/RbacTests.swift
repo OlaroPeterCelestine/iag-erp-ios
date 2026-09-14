@@ -84,6 +84,7 @@ final class RbacTests: XCTestCase {
         XCTAssertEqual(s.login("contractor", "iagdemo", departmentId: "banking"), "Your role cannot open that app.")
         XCTAssertNil(s.login("contractor", "iagdemo"))
         XCTAssertEqual(s.activeDepartmentId, "projects")
+        XCTAssertEqual(s.activeAppId, "projects")
         XCTAssertTrue(s.canOpen("contract-manager"))
         XCTAssertFalse(s.canOpen("sales"))
         s.setActiveDepartment("banking")
@@ -167,6 +168,7 @@ final class RbacTests: XCTestCase {
         XCTAssertTrue(s.canCreate("lab"))
         XCTAssertFalse(s.canApprove)
         XCTAssertEqual(s.activeDepartmentId, "lab")
+        XCTAssertEqual(s.activeAppId, "quality")
     }
 
     func testCatalogSeedsEveryWebErpFeature() {
@@ -241,5 +243,93 @@ final class RbacTests: XCTestCase {
         XCTAssertTrue(s.canOpen("clock-in"))
         XCTAssertTrue(s.canOpen("projects"))
         XCTAssertFalse(s.canOpen("payroll"))
+    }
+
+    func testSuiteAppsAreSeparateFullTools() {
+        XCTAssertEqual(suiteApps.map(\.id).sorted(), [
+            "finance", "fleet", "hr", "logistics", "procurement", "production",
+            "projects", "quality", "records", "requests", "sales", "security",
+        ].sorted())
+        XCTAssertTrue(canOpenSuiteApp("Procurement", "procurement"))
+        XCTAssertFalse(canOpenSuiteApp("Procurement", "security"))
+        XCTAssertTrue(canOpenSuiteApp("HR", "hr"))
+        XCTAssertFalse(canOpenSuiteApp("Viewer", "security"))
+
+        let s = store()
+        XCTAssertNil(s.login("admin", "iagdemo"))
+        XCTAssertNil(s.activeAppId)
+        XCTAssertEqual(s.visibleSuiteApps.count, suiteApps.count)
+        s.openApp("finance")
+        XCTAssertEqual(s.activeAppId, "finance")
+        XCTAssertTrue(s.appModules.contains { $0.id == "banking" })
+        XCTAssertFalse(s.appModules.contains { $0.id == "security" })
+        s.openApp("security")
+        XCTAssertEqual(s.activeAppId, "security")
+        XCTAssertEqual(s.appModules.map(\.id), ["security"])
+        s.closeApp()
+        XCTAssertNil(s.activeAppId)
+        s.logout()
+
+        XCTAssertNil(s.login("procurement", "iagdemo"))
+        XCTAssertEqual(s.activeAppId, "procurement")
+        XCTAssertTrue(s.appModules.contains { $0.id == "purchases" })
+        XCTAssertFalse(s.appModules.contains { $0.id == "banking" })
+        s.logout()
+
+        XCTAssertNil(s.login("hr", "iagdemo"))
+        XCTAssertEqual(s.activeAppId, "hr")
+        s.logout()
+
+        XCTAssertEqual(s.login("clerk", "iagdemo", departmentId: "security"), "Your role cannot open that app.")
+        XCTAssertNil(s.login("clerk", "iagdemo"))
+        XCTAssertEqual(s.activeAppId, "finance")
+    }
+
+    func testQuickActionsFollowAppAndRbac() {
+        let s = store()
+        XCTAssertNil(s.login("admin", "iagdemo"))
+        XCTAssertTrue(s.launcherQuickActions.contains { $0.id == "clock" })
+        XCTAssertTrue(s.launcherQuickActions.contains { $0.id == "approvals" })
+        s.openApp("finance")
+        let financeIds = s.homeQuickActions.map(\.id)
+        XCTAssertTrue(financeIds.contains("clock"))
+        XCTAssertTrue(financeIds.contains("receipt"))
+        XCTAssertTrue(financeIds.contains("payment"))
+        XCTAssertFalse(financeIds.contains("po"))
+        XCTAssertLessThanOrEqual(s.homeQuickActions.count, 8)
+        s.openApp("sales")
+        XCTAssertTrue(s.homeQuickActions.contains { $0.id == "invoice" })
+        XCTAssertTrue(s.homeQuickActions.contains { $0.id == "customer" })
+        s.logout()
+
+        XCTAssertNil(s.login("viewer", "iagdemo"))
+        XCTAssertEqual(s.activeAppId, "finance")
+        XCTAssertTrue(s.homeQuickActions.contains { $0.id == "clock" })
+        XCTAssertTrue(s.homeQuickActions.contains { $0.id == "reports" })
+        XCTAssertFalse(s.homeQuickActions.contains { $0.id == "receipt" })
+        XCTAssertFalse(s.homeQuickActions.contains { $0.id == "approvals" })
+        s.logout()
+
+        XCTAssertNil(s.login("procurement", "iagdemo"))
+        XCTAssertTrue(s.homeQuickActions.contains { $0.id == "po" })
+        XCTAssertFalse(s.homeQuickActions.contains { $0.id == "invoice" })
+    }
+
+    func testWelcomeStatsShowLiveCounts() {
+        let s = store()
+        XCTAssertNil(s.login("admin", "iagdemo"))
+        XCTAssertNil(s.activeAppId)
+        XCTAssertEqual(s.welcomeStats.map(\.id), ["apps", "records", "todo", "clock"])
+        XCTAssertEqual(s.welcomeStats.first { $0.id == "apps" }?.value, "\(s.visibleSuiteApps.count)")
+        XCTAssertEqual(s.welcomeStats.first { $0.id == "clock" }?.value, "Out")
+        s.openApp("finance")
+        XCTAssertEqual(s.welcomeStats.map(\.id), ["desks", "records", "todo", "clock"])
+        XCTAssertEqual(s.welcomeStats.first { $0.id == "desks" }?.value, "\(s.appModules.count)")
+        s.logout()
+
+        XCTAssertNil(s.login("viewer", "iagdemo"))
+        XCTAssertFalse(s.welcomeStats.contains { $0.id == "todo" })
+        XCTAssertTrue(s.welcomeStats.contains { $0.id == "desks" })
+        XCTAssertTrue(s.welcomeStats.contains { $0.id == "clock" })
     }
 }
