@@ -75,7 +75,6 @@
 /* Begin PBXNativeTarget section */
 		874E7FD7A39CF1D6319F589D /* ERP iOS */ = {
 			isa = PBXNativeTarget;
-			name = "ERP iOS";
 			buildConfigurationList = E8949D512A1ED272DC698682 /* Build configuration list for PBXNativeTarget "ERP iOS" */;
 			buildPhases = (
 				2A976C55E781D531D45C10A3 /* Sources */,
@@ -129,7 +128,6 @@
 		D358F9953273580C5B97B1E2 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
-			runOnlyForDeploymentPostprocessing = 0;
 			files = (
 				2A8EB5D3376C791DADAC7B16 /* Assets.xcassets in Resources */,
 			);
@@ -260,7 +258,8 @@
 			buildConfigurations = (
 				C9A1B2E190A1E670EB1D4ACA /* Debug */,
 				41E70647AD8CF222172708CF /* Release */,
-			runOnlyForDeploymentPostprocessing = 0;
+			);
+			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
