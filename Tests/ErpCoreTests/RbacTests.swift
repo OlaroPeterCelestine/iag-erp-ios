@@ -174,6 +174,7 @@ final class RbacTests: XCTestCase {
         let seed = completeCatalogSeed(modules)
         XCTAssertGreaterThanOrEqual(modules.count, 28)
         for module in modules {
+            if module.id == "clock-in" { continue }
             for entity in module.entities {
                 XCTAssertTrue(
                     seed.contains { $0.moduleId == module.id && $0.entity == entity },
@@ -193,5 +194,52 @@ final class RbacTests: XCTestCase {
         XCTAssertFalse(canAccessSpecialNav("Viewer", "analytics"))
         XCTAssertTrue(s.visibleWorkspaceTools.contains { $0.id == "trace" })
         XCTAssertFalse(s.visibleWorkspaceTools.contains { $0.id == "analytics" })
+    }
+
+    func testEveryWebDepartmentAndClockInAreOnThePhone() {
+        let modules = erpModules()
+        let ids = Set(modules.map(\.id))
+        for id in webErpDepartmentIds {
+            XCTAssertTrue(ids.contains(id), "missing web department \(id)")
+        }
+        XCTAssertTrue(ids.contains("clock-in"))
+        XCTAssertTrue(canAccessModule("Viewer", "clock-in"))
+        XCTAssertTrue(canAccessModule("Clerk", "clock-in"))
+        XCTAssertTrue(canAccessModule("Contractor", "clock-in"))
+        XCTAssertTrue(canCreateIn("Viewer", "clock-in"))
+
+        let s = store()
+        XCTAssertNil(s.login("clerk", "iagdemo"))
+        XCTAssertTrue(s.canOpen("clock-in"))
+        XCTAssertFalse(s.canOpen("payroll"))
+        XCTAssertTrue(s.canClockIn)
+        XCTAssertFalse(s.geofenceZones().isEmpty)
+
+        let inside = s.punch(kind: "in", latitude: hqLatitude, longitude: hqLongitude, accuracy: 8)
+        XCTAssertTrue(inside?.contains("Checked in") == true, inside ?? "nil")
+        XCTAssertNotNil(s.openAttendanceToday())
+        XCTAssertEqual(s.openAttendanceToday()?.status, "Present")
+        XCTAssertEqual(s.openAttendanceToday()?.fields["verification"], "Verified")
+
+        let outside = s.punch(kind: "out", latitude: 0, longitude: 0, accuracy: 8)
+        XCTAssertTrue(outside?.localizedCaseInsensitiveContains("outside") == true, outside ?? "nil")
+        XCTAssertNotNil(s.openAttendanceToday())
+        XCTAssertTrue(s.forEntity("payroll", "Punch Log").contains { $0.status == "Rejected" })
+
+        let out = s.punch(kind: "out", latitude: hqLatitude, longitude: hqLongitude, accuracy: 8)
+        XCTAssertTrue(out?.contains("Checked out") == true, out ?? "nil")
+        XCTAssertNil(s.openAttendanceToday())
+        s.logout()
+
+        XCTAssertNil(s.login("viewer", "iagdemo"))
+        XCTAssertTrue(s.canOpen("clock-in"))
+        XCTAssertTrue(s.visibleModules.contains { $0.id == "clock-in" })
+        XCTAssertTrue(s.punch(kind: "in", latitude: hqLatitude, longitude: hqLongitude, accuracy: 8)?.contains("Checked in") == true)
+        s.logout()
+
+        XCTAssertNil(s.login("contractor", "iagdemo"))
+        XCTAssertTrue(s.canOpen("clock-in"))
+        XCTAssertTrue(s.canOpen("projects"))
+        XCTAssertFalse(s.canOpen("payroll"))
     }
 }

@@ -10,6 +10,7 @@
 		A73A493417A26149E2E116AE /* ErpIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC256553FCCF48F353EE1F8 /* ErpIOSApp.swift */; };
 		1CB61EFA8150446E28595406 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF5858A0E0E2201B92DA6CCC /* LoginView.swift */; };
 		8B4334446378D9AC4B14D5E4 /* ShellViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E2ADCDC13D7DD79363738B /* ShellViews.swift */; };
+		2613A130BA2E4F11EDA8854F /* ClockInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58956FD1C4B58BA408AE14E8 /* ClockInView.swift */; };
 		5C621F36A0216493F8BF9CD7 /* RecordViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80D09DE96D5972A468BA6F9D /* RecordViews.swift */; };
 		9529B5B37184624524358A00 /* AccessViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBA6FA9546C6E82C9C58545 /* AccessViews.swift */; };
 		2A8EB5D3376C791DADAC7B16 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9C0AAAAA1245D07FC1AF5570 /* Assets.xcassets */; };
@@ -20,6 +21,7 @@
 		3CC256553FCCF48F353EE1F8 /* ErpIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErpIOSApp.swift; sourceTree = "<group>"; };
 		AF5858A0E0E2201B92DA6CCC /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		21E2ADCDC13D7DD79363738B /* ShellViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellViews.swift; sourceTree = "<group>"; };
+		58956FD1C4B58BA408AE14E8 /* ClockInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClockInView.swift; sourceTree = "<group>"; };
 		80D09DE96D5972A468BA6F9D /* RecordViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordViews.swift; sourceTree = "<group>"; };
 		8EBA6FA9546C6E82C9C58545 /* AccessViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessViews.swift; sourceTree = "<group>"; };
 		9C0AAAAA1245D07FC1AF5570 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -44,6 +46,7 @@
 				3CC256553FCCF48F353EE1F8 /* ErpIOSApp.swift */,
 				AF5858A0E0E2201B92DA6CCC /* LoginView.swift */,
 				21E2ADCDC13D7DD79363738B /* ShellViews.swift */,
+				58956FD1C4B58BA408AE14E8 /* ClockInView.swift */,
 				80D09DE96D5972A468BA6F9D /* RecordViews.swift */,
 				8EBA6FA9546C6E82C9C58545 /* AccessViews.swift */,
 				9C0AAAAA1245D07FC1AF5570 /* Assets.xcassets */,
@@ -126,6 +129,7 @@
 		D358F9953273580C5B97B1E2 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
+			runOnlyForDeploymentPostprocessing = 0;
 			files = (
 				2A8EB5D3376C791DADAC7B16 /* Assets.xcassets in Resources */,
 			);
@@ -141,6 +145,7 @@
 				A73A493417A26149E2E116AE /* ErpIOSApp.swift in Sources */,
 				1CB61EFA8150446E28595406 /* LoginView.swift in Sources */,
 				8B4334446378D9AC4B14D5E4 /* ShellViews.swift in Sources */,
+				2613A130BA2E4F11EDA8854F /* ClockInView.swift in Sources */,
 				5C621F36A0216493F8BF9CD7 /* RecordViews.swift in Sources */,
 				9529B5B37184624524358A00 /* AccessViews.swift in Sources */,
 			);
@@ -192,6 +197,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "ERP iOS";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ERP uses your location to verify you are on an IAG site or block when you clock in.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -219,6 +225,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "ERP iOS";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ERP uses your location to verify you are on an IAG site or block when you clock in.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -253,8 +260,7 @@
 			buildConfigurations = (
 				C9A1B2E190A1E670EB1D4ACA /* Debug */,
 				41E70647AD8CF222172708CF /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
+			runOnlyForDeploymentPostprocessing = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */

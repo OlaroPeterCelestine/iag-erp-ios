@@ -19,7 +19,11 @@ struct DepartmentView: View {
                 Section("\(module.entities.count) features") {
                     ForEach(entities, id: \.self) { entity in
                         NavigationLink {
-                            EntityListView(moduleId: moduleId, entity: entity)
+                            if entity == "Clock In" {
+                                ClockInView()
+                            } else {
+                                EntityListView(moduleId: moduleId, entity: entity)
+                            }
                         } label: {
                             HStack {
                                 VStack(alignment: .leading) {
@@ -51,42 +55,46 @@ struct EntityListView: View {
     var body: some View {
         let store = box.store
         let _ = box.tick
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let rows = store.forEntity(moduleId, entity).filter {
-            q.isEmpty
-                || $0.title.lowercased().contains(q)
-                || $0.subtitle.lowercased().contains(q)
-                || $0.status.lowercased().contains(q)
-        }
-        List {
-            if moduleId == "reports" {
-                Section("Snapshot") {
-                    ForEach(reportLines(for: entity), id: \.0) { line in
-                        LabeledContent(line.0, value: line.1)
+        if entity == "Clock In" {
+            ClockInView()
+        } else {
+            let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let rows = store.recordsFor(moduleId, entity).filter {
+                q.isEmpty
+                    || $0.title.lowercased().contains(q)
+                    || $0.subtitle.lowercased().contains(q)
+                    || $0.status.lowercased().contains(q)
+            }
+            List {
+                if moduleId == "reports" {
+                    Section("Snapshot") {
+                        ForEach(reportLines(for: entity), id: \.0) { line in
+                            LabeledContent(line.0, value: line.1)
+                        }
+                    }
+                }
+                if rows.isEmpty {
+                    Text("No \(entity.lowercased()) yet.").foregroundStyle(.secondary)
+                }
+                ForEach(rows, id: \.id) { rec in
+                    NavigationLink {
+                        RecordDetailView(recordId: rec.id)
+                    } label: {
+                        VStack(alignment: .leading) {
+                            Text(rec.title)
+                            Text(rec.subtitle).font(.caption).foregroundStyle(.secondary)
+                            Text(rec.status).foregroundStyle(statusColor(rec.status))
+                            if let amount = rec.amount { Text(formatMoney(amount)).fontWeight(.semibold) }
+                        }
                     }
                 }
             }
-            if rows.isEmpty {
-                Text("No \(entity.lowercased()) yet.").foregroundStyle(.secondary)
-            }
-            ForEach(rows, id: \.id) { rec in
-                NavigationLink {
-                    RecordDetailView(recordId: rec.id)
-                } label: {
-                    VStack(alignment: .leading) {
-                        Text(rec.title)
-                        Text(rec.subtitle).font(.caption).foregroundStyle(.secondary)
-                        Text(rec.status).foregroundStyle(statusColor(rec.status))
-                        if let amount = rec.amount { Text(formatMoney(amount)).fontWeight(.semibold) }
-                    }
+            .navigationTitle(entity)
+            .searchable(text: $query, prompt: "Filter records")
+            .toolbar {
+                if store.canCreate(moduleId, entity) && entity != "My punches" && entity != "Punch Log" {
+                    NavigationLink { RecordFormView(moduleId: moduleId, entity: entity) } label: { Image(systemName: "plus") }
                 }
-            }
-        }
-        .navigationTitle(entity)
-        .searchable(text: $query, prompt: "Filter records")
-        .toolbar {
-            if store.canCreate(moduleId, entity) {
-                NavigationLink { RecordFormView(moduleId: moduleId, entity: entity) } label: { Image(systemName: "plus") }
             }
         }
     }

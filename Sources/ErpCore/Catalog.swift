@@ -136,7 +136,7 @@ public func sampleRecord(module: ErpModule, entity: String) -> ErpRecord {
 
 public func completeCatalogSeed(_ modules: [ErpModule] = erpModules()) -> [ErpRecord] {
     modules.flatMap { module in
-        if module.id == "clock-in" { return [] }
+        if module.id == "clock-in" { return [ErpRecord]() }
         let grouped = Dictionary(grouping: module.seed, by: \.entity)
         return module.entities.flatMap { entity -> [ErpRecord] in
             if let rows = grouped[entity], !rows.isEmpty { return rows }

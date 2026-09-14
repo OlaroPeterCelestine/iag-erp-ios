@@ -14,15 +14,20 @@ struct ShellView: View {
             DepartmentsView()
                 .tabItem { Label("Departments", systemImage: "building.2") }
                 .tag(1)
+            NavigationStack {
+                ClockInView()
+            }
+            .tabItem { Label("Clock", systemImage: "clock") }
+            .tag(2)
             if box.store.canApprove {
                 ApprovalsView()
                     .tabItem { Label("Approvals", systemImage: "checkmark.rectangle") }
-                    .tag(2)
+                    .tag(3)
                     .badge(box.store.pendingApprovals.count)
             }
             MoreView()
                 .tabItem { Label("More", systemImage: "square.grid.2x2") }
-                .tag(3)
+                .tag(4)
         }
     }
 }
@@ -41,6 +46,18 @@ struct HomeView: View {
                 Section {
                     Text("Good morning, \(first)").font(.title2.bold())
                     Text("\(store.user?.role ?? "Inspire Africa Group") · Finance ERP").foregroundStyle(.secondary)
+                }
+                if store.canClockIn {
+                    Section("Clock in") {
+                        NavigationLink {
+                            ClockInView()
+                        } label: {
+                            VStack(alignment: .leading) {
+                                Text(store.openAttendanceToday() == nil ? "Clock in" : "Clock out")
+                                Text("GPS punch against HR Sites and Blocks — every login.").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 }
                 if store.isAdmin {
                     Section("Access") {
@@ -293,6 +310,8 @@ struct WorkspaceToolView: View {
         let tool = workspaceTools.first { $0.id == toolId }
         Group {
             switch toolId {
+            case "clock-in":
+                ClockInView()
             case "trace":
                 List {
                     Section("Look up a document, plate, lot, or person") {
@@ -462,12 +481,15 @@ let erpComms: [(title: String, detail: String)] = [
 
 let erpGuides: [(title: String, body: String)] = [
     ("Desks", "Every sidebar tab from web IAG ERP is a department here. Open a desk to see every feature (customers, invoices, lots, reports, …), then open a record."),
+    ("Clock in", "The Clock tab is on every signed-in phone. GPS is checked against HR Sites and Blocks. Outside the fence is rejected; HR still sees punches on Attendance and Punch Log."),
     ("Approvals", "Expense claims, general requests, oral payments, leave, IPC, materials, fuel, trips, and maintenance wait on the Approvals tab when your role has a desk."),
-    ("SoD", "Administrators see every app. Specialty desks (fleet, lab, CRM, …) need an explicit grant. Contractors stay on Projects and Contract Manager."),
+    ("SoD", "Administrators see every app. Specialty desks (fleet, lab, CRM, …) need an explicit grant. Contractors stay on Projects and Contract Manager, plus Clock In."),
 ]
 
 let erpQnA: [(q: String, a: String)] = [
     ("Where is Banking?", "Home or Departments → Treasury → Banking. Features include bank accounts, transfers, statements, and reconciliations."),
+    ("Who can clock in?", "Every signed-in login, including clerk, viewer, and contractor. You do not need the HR desk."),
     ("Who can approve?", "QS, Stores, Procurement, HR, HOD, PM, Accounts, GM, CEO, Finance, and Administrators. Clerk and Viewer cannot."),
     ("Demo password?", "iagdemo. Try admin to see every desk."),
 ]
+
