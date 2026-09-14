@@ -133,7 +133,6 @@ pbx = f"""// !$*UTF8*$!
 /* Begin PBXNativeTarget section */
 		{target} /* ERP iOS */ = {{
 			isa = PBXNativeTarget;
- marquee = ERP iOS;
 			buildConfigurationList = {config_list_target} /* Build configuration list for PBXNativeTarget "ERP iOS" */;
 			buildPhases = (
 				{sources} /* Sources */,
@@ -177,7 +176,7 @@ pbx = f"""// !$*UTF8*$!
 			productRefGroup = {group_products} /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
- marqueeTargets = (
+			targets = (
 				{target} /* ERP iOS */,
 			);
 		}};
@@ -187,7 +186,6 @@ pbx = f"""// !$*UTF8*$!
 		{resources} /* Resources */ = {{
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
- marquee = 0;
 			files = (
 {resource_phase_files}
 			);
@@ -313,7 +311,8 @@ pbx = f"""// !$*UTF8*$!
 			buildConfigurations = (
 				{config_debug} /* Debug */,
 				{config_release} /* Release */,
- marquee = 0;
+			);
+			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		}};
 /* End XCConfigurationList section */
@@ -335,11 +334,6 @@ pbx = f"""// !$*UTF8*$!
 	rootObject = {project} /* Project object */;
 }}
 """
-
-# Fix typos from the template
-pbx = pbx.replace(" marquee = ERP iOS;", "\t\t\tname = \"ERP iOS\";")
-pbx = pbx.replace(" marqueeTargets = (", "\t\t\ttargets = (")
-pbx = pbx.replace(" marquee = 0;", "\t\t\trunOnlyForDeploymentPostprocessing = 0;")
 
 out = root / "ErpIOS.xcodeproj"
 out.mkdir(exist_ok=True)
