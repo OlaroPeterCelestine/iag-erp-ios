@@ -171,6 +171,10 @@ public final class ErpStore {
         ))
     }
 
+    public func addListener(_ listener: @escaping () -> Void) {
+        listeners.append(listener)
+    }
+
     private func notify() { listeners.forEach { $0() } }
 
     public func roleOf(_ name: String?) -> RoleDefinition? { findRoleDefinition(roles, name) }
