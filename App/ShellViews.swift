@@ -7,33 +7,35 @@ struct ShellView: View {
 
     var body: some View {
         let _ = box.tick
-        if box.store.activeAppId == nil {
-            AppsLauncherView()
-        } else {
-            TabView(selection: $tab) {
-                HomeView()
-                    .tabItem { Label("Home", systemImage: "house") }
-                    .tag(0)
-                DepartmentsView()
-                    .tabItem { Label("Desks", systemImage: "building.2") }
-                    .tag(1)
-                NavigationStack {
-                    ClockInView()
+        TabView(selection: $tab) {
+            Group {
+                if box.store.activeAppId == nil {
+                    AppsLauncherView()
+                } else {
+                    HomeView()
                 }
-                .tabItem { Label("Clock", systemImage: "clock") }
-                .tag(2)
-                if box.store.canApprove {
-                    ApprovalsView()
-                        .tabItem { Label("Approvals", systemImage: "checkmark.rectangle") }
-                        .tag(3)
-                        .badge(box.store.appPendingApprovals.count)
-                }
-                MoreView()
-                    .tabItem { Label("More", systemImage: "square.grid.2x2") }
-                    .tag(4)
             }
-            .tint(IagTheme.orange)
+            .tabItem { Label("Home", systemImage: "house") }
+            .tag(0)
+            DepartmentsView()
+                .tabItem { Label("Desks", systemImage: "building.2") }
+                .tag(1)
+            NavigationStack {
+                ClockInView()
+            }
+            .tabItem { Label("Clock", systemImage: "clock") }
+            .tag(2)
+            if box.store.canApprove {
+                ApprovalsView()
+                    .tabItem { Label("Approvals", systemImage: "checkmark.rectangle") }
+                    .tag(3)
+                    .badge(box.store.appPendingApprovals.count)
+            }
+            MoreView()
+                .tabItem { Label("More", systemImage: "square.grid.2x2") }
+                .tag(4)
         }
+        .tint(IagTheme.orange)
     }
 }
 
@@ -48,15 +50,15 @@ struct HomeView: View {
         let hits = store.searchHits(query)
         let app = store.activeSuiteApp
         let searching = !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let recents = Array(store.recent.filter { store.canOpen($0.moduleId) }.prefix(6))
-        let todos = Array(store.appPendingApprovals.prefix(4))
+        let recents = Array(store.recent.filter { store.canOpen($0.moduleId) }.prefix(3))
+        let todos = Array(store.appPendingApprovals.prefix(3))
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 28) {
                     if !searching {
                         WelcomeCard(
                             name: first,
-                            subtitle: "\(store.user?.role ?? "Inspire Africa Group") · \(app?.label ?? appName)",
+                            subtitle: app?.label ?? store.user?.role ?? appName,
                             stats: store.welcomeStats
                         )
                     }
@@ -79,19 +81,22 @@ struct HomeView: View {
                     } else {
                         if !store.homeQuickActions.isEmpty {
                             VStack(alignment: .leading, spacing: 14) {
-                                IagSectionHeader(title: "Quick actions")
-                                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 16) {
-                                    ForEach(store.homeQuickActions) { action in
-                                        NavigationLink {
-                                            QuickActionDestination(action: action)
-                                        } label: {
-                                            QuickActionButton(
-                                                action: action,
-                                                badge: action.kind == .approvals ? store.appPendingApprovals.count : 0
-                                            )
+                                IagSectionHeader(title: "Do now")
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 12) {
+                                        ForEach(store.homeQuickActions) { action in
+                                            NavigationLink {
+                                                QuickActionDestination(action: action)
+                                            } label: {
+                                                QuickActionButton(
+                                                    action: action,
+                                                    badge: action.kind == .approvals ? store.appPendingApprovals.count : 0
+                                                )
+                                            }
+                                            .buttonStyle(.plain)
                                         }
-                                        .buttonStyle(.plain)
                                     }
+                                    .padding(.horizontal, 2)
                                 }
                             }
                         }
@@ -109,44 +114,38 @@ struct HomeView: View {
                             }
                         }
 
-                        if store.canApprove {
+                        if store.canApprove && !todos.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
                                 NavigationLink {
                                     ApprovalsList()
                                 } label: {
-                                    IagSectionHeader(title: "To do", accessory: todos.isEmpty ? nil : "See all")
+                                    IagSectionHeader(title: "Waiting for you", accessory: "See all")
                                 }
                                 .buttonStyle(.plain)
                                 IagGrouped {
-                                    if todos.isEmpty {
-                                        IagEmptyHint(text: "Nothing waiting for your desk.")
-                                    } else {
-                                        ForEach(Array(todos.enumerated()), id: \.element.id) { index, rec in
-                                            NavigationLink {
-                                                RecordDetailView(recordId: rec.id)
-                                            } label: {
-                                                DeskRow(
-                                                    title: rec.title,
-                                                    subtitle: "\(rec.entity) · \(rec.subtitle)",
-                                                    systemName: "checkmark.rectangle",
-                                                    status: rec.status
-                                                )
-                                                .padding(14)
-                                            }
-                                            .buttonStyle(.plain)
-                                            if index < todos.count - 1 { IagRowDivider() }
+                                    ForEach(Array(todos.enumerated()), id: \.element.id) { index, rec in
+                                        NavigationLink {
+                                            RecordDetailView(recordId: rec.id)
+                                        } label: {
+                                            DeskRow(
+                                                title: rec.title,
+                                                subtitle: "\(rec.entity) · \(rec.subtitle)",
+                                                systemName: "checkmark.rectangle",
+                                                status: rec.status
+                                            )
+                                            .padding(14)
                                         }
+                                        .buttonStyle(.plain)
+                                        if index < todos.count - 1 { IagRowDivider() }
                                     }
                                 }
                             }
                         }
 
-                        VStack(alignment: .leading, spacing: 12) {
-                            IagSectionHeader(title: "Recent")
-                            IagGrouped {
-                                if recents.isEmpty {
-                                    IagEmptyHint(text: "Records you open will show up here.")
-                                } else {
+                        if !recents.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                IagSectionHeader(title: "Jump back")
+                                IagGrouped {
                                     ForEach(Array(recents.enumerated()), id: \.element.id) { index, rec in
                                         NavigationLink {
                                             RecordDetailView(recordId: rec.id)
@@ -168,11 +167,11 @@ struct HomeView: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .padding(.vertical, 8)
             }
             .iagCanvas()
             .navigationTitle(app?.label ?? "Home")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .searchable(text: $query, prompt: "Search desks and records")
             .toolbar {
                 Button {
@@ -181,9 +180,6 @@ struct HomeView: View {
                     Image(systemName: "square.grid.2x2")
                 }
                 .accessibilityLabel("Apps")
-                if store.isAdmin {
-                    NavigationLink { AccessView() } label: { Image(systemName: "shield") }
-                }
                 NavigationLink { ProfileView() } label: { Image(systemName: "person.circle") }
             }
         }
@@ -311,15 +307,17 @@ struct MoreView: View {
         let _ = box.tick
         NavigationStack {
             List {
-                Section("Apps") {
-                    Button {
-                        store.closeApp()
-                    } label: {
-                        DeskRow(
-                            title: "Switch app",
-                            subtitle: store.activeSuiteApp.map { "You are in \($0.label)." } ?? "Open another IAG tool.",
-                            systemName: "square.grid.2x2"
-                        )
+                if store.activeAppId != nil {
+                    Section("Apps") {
+                        Button {
+                            store.closeApp()
+                        } label: {
+                            DeskRow(
+                                title: "Switch app",
+                                subtitle: store.activeSuiteApp.map { "You are in \($0.label)." } ?? "Open another IAG tool.",
+                                systemName: "square.grid.2x2"
+                            )
+                        }
                     }
                 }
                 ForEach(workspaceGroups, id: \.self) { group in
@@ -364,79 +362,136 @@ struct MoreView: View {
 
 struct AppsLauncherView: View {
     @EnvironmentObject var box: StoreBox
+    @State private var query = ""
 
     var body: some View {
         let store = box.store
         let _ = box.tick
         let first = store.user?.name.split(separator: " ").first.map(String.init) ?? "there"
+        let todos = Array(store.pendingApprovals.prefix(3))
+        let recents = Array(store.recent.filter { store.canOpen($0.moduleId) }.prefix(3))
+        let today = store.launcherQuickActions.filter { $0.appId == nil }
+        let searching = !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hits = store.searchHits(query)
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    WelcomeCard(
-                        name: first,
-                        subtitle: "Pick an app to start work.",
-                        stats: store.welcomeStats
-                    )
+                VStack(alignment: .leading, spacing: 28) {
+                    if !searching {
+                        WelcomeCard(
+                            name: first,
+                            subtitle: store.user?.role ?? appName,
+                            stats: store.welcomeStats
+                        )
+                    }
 
-                    if !store.launcherQuickActions.isEmpty {
+                    if searching {
+                        VStack(alignment: .leading, spacing: 12) {
+                            IagSectionHeader(title: "Search")
+                            if hits.isEmpty {
+                                IagGrouped { IagEmptyHint(text: "No matches in desks, features, or records.") }
+                            } else {
+                                IagGrouped {
+                                    ForEach(Array(hits.enumerated()), id: \.element.id) { index, hit in
+                                        SearchHitRow(hit: hit)
+                                            .padding(14)
+                                        if index < hits.count - 1 { IagRowDivider() }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        if !today.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                IagSectionHeader(title: "Do now")
+                                HStack(spacing: 10) {
+                                    ForEach(today) { action in
+                                        NavigationLink {
+                                            QuickActionDestination(action: action)
+                                        } label: {
+                                            TodayActionCard(
+                                                action: action,
+                                                badge: action.kind == .approvals ? store.pendingApprovals.count : 0
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                        }
+
                         VStack(alignment: .leading, spacing: 14) {
-                            IagSectionHeader(title: "Shortcuts")
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 16) {
-                                ForEach(store.launcherQuickActions) { action in
-                                    NavigationLink {
-                                        QuickActionDestination(action: action)
+                            IagSectionHeader(title: "Apps")
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 16) {
+                                ForEach(store.visibleSuiteApps) { app in
+                                    Button {
+                                        store.openApp(app.id)
                                     } label: {
-                                        QuickActionButton(
-                                            action: action,
-                                            badge: action.kind == .approvals ? store.pendingApprovals.count : 0
-                                        )
+                                        AppTile(app: app)
                                     }
                                     .buttonStyle(.plain)
                                 }
                             }
                         }
-                    }
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        IagSectionHeader(title: "Apps")
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                            ForEach(store.visibleSuiteApps) { app in
-                                Button {
-                                    store.openApp(app.id)
+                        if store.canApprove && !todos.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                NavigationLink {
+                                    ApprovalsList()
                                 } label: {
-                                    AppTile(app: app)
+                                    IagSectionHeader(title: "Waiting for you", accessory: "See all")
                                 }
                                 .buttonStyle(.plain)
+                                IagGrouped {
+                                    ForEach(Array(todos.enumerated()), id: \.element.id) { index, rec in
+                                        NavigationLink {
+                                            RecordDetailView(recordId: rec.id)
+                                        } label: {
+                                            DeskRow(
+                                                title: rec.title,
+                                                subtitle: rec.entity,
+                                                systemName: "checkmark.rectangle",
+                                                status: rec.status
+                                            )
+                                            .padding(14)
+                                        }
+                                        .buttonStyle(.plain)
+                                        if index < todos.count - 1 { IagRowDivider() }
+                                    }
+                                }
                             }
                         }
-                    }
 
-                    IagGrouped {
-                        NavigationLink {
-                            ProfileView()
-                        } label: {
-                            DeskRow(title: "Account", subtitle: "Profile, theme, and sign out", systemName: "person.crop.circle")
-                                .padding(14)
-                        }
-                        .buttonStyle(.plain)
-                        if store.isAdmin {
-                            IagRowDivider()
-                            NavigationLink {
-                                AccessView()
-                            } label: {
-                                DeskRow(title: "Users & roles", subtitle: "Custom roles and workspace users", systemName: "shield")
-                                    .padding(14)
+                        if !recents.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                IagSectionHeader(title: "Jump back")
+                                IagGrouped {
+                                    ForEach(Array(recents.enumerated()), id: \.element.id) { index, rec in
+                                        NavigationLink {
+                                            RecordDetailView(recordId: rec.id)
+                                        } label: {
+                                            DeskRow(
+                                                title: rec.title,
+                                                subtitle: rec.entity,
+                                                systemName: "doc.text",
+                                                status: rec.status
+                                            )
+                                            .padding(14)
+                                        }
+                                        .buttonStyle(.plain)
+                                        if index < recents.count - 1 { IagRowDivider() }
+                                    }
+                                }
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .padding(.vertical, 8)
             }
             .iagCanvas()
-            .navigationTitle("Apps")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Home")
+            .navigationBarTitleDisplayMode(.large)
+            .searchable(text: $query, prompt: "Search anything")
         }
     }
 }
@@ -696,5 +751,5 @@ let erpQnA: [(q: String, a: String)] = [
     ("Where is Banking?", "Home or Departments → Treasury → Banking. Features include bank accounts, transfers, statements, and reconciliations."),
     ("Who can clock in?", "Every signed-in login, including clerk, viewer, and contractor. You do not need the HR desk."),
     ("Who can approve?", "QS, Stores, Procurement, HR, HOD, PM, Accounts, GM, CEO, Finance, and Administrators. Clerk and Viewer cannot."),
-    ("How do I sign in?", "Use the same username and password as the web ERP. The old short demo login no longer works. To try the app offline, tap Forgot password, save a password, then Continue on this device."),
+    ("How do I sign in?", "The black Sign in button uses the live web ERP password (10+ characters). To try the app here, type admin and any password of 6+ characters, then tap Continue on this device."),
 ]

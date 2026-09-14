@@ -3,6 +3,16 @@ import Foundation
 public let appName = "IAG Central"
 public let appVersion = "1.0.0"
 
+func erpJsonText(_ j: [String: Any], _ key: String, fallback: String = "") -> String {
+    guard let value = j[key], !(value is NSNull) else { return fallback }
+    if let text = value as? String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? fallback : trimmed
+    }
+    if let number = value as? NSNumber { return number.stringValue }
+    return "\(value)"
+}
+
 public struct AuthUser: Equatable, Sendable {
     public var username: String
     public var name: String
@@ -32,15 +42,15 @@ public struct AuthUser: Equatable, Sendable {
     }
 
     public static func fromJSON(_ j: [String: Any]) -> AuthUser {
-        let username = j["username"] as? String ?? ""
+        let username = erpJsonText(j, "username")
         let defaults = AuthUser.demo(username)
-        let email = ((j["email"] as? String) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let phone = ((j["phone"] as? String) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let title = ((j["title"] as? String) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let email = erpJsonText(j, "email")
+        let phone = erpJsonText(j, "phone")
+        let title = erpJsonText(j, "title")
         return AuthUser(
             username: username,
-            name: j["name"] as? String ?? defaults.name,
-            role: j["role"] as? String ?? defaults.role,
+            name: erpJsonText(j, "name", fallback: defaults.name),
+            role: erpJsonText(j, "role", fallback: defaults.role),
             email: email.isEmpty ? defaults.email : email,
             phone: phone.isEmpty ? defaults.phone : phone,
             title: title.isEmpty ? defaults.title : title
@@ -118,14 +128,15 @@ public final class ErpRecord: Equatable {
         if let raw = j["fields"] as? [String: Any] {
             for (k, v) in raw { fields[k] = "\(v)" }
         }
+        let id = erpJsonText(j, "id")
         return ErpRecord(
-            id: j["id"] as? String ?? newId(),
-            moduleId: j["moduleId"] as? String ?? "",
-            entity: j["entity"] as? String ?? "",
-            title: j["title"] as? String ?? "",
-            subtitle: j["subtitle"] as? String ?? "",
-            status: j["status"] as? String ?? "Draft",
-            date: j["date"] as? String ?? "",
+            id: id.isEmpty ? newId() : id,
+            moduleId: erpJsonText(j, "moduleId"),
+            entity: erpJsonText(j, "entity"),
+            title: erpJsonText(j, "title"),
+            subtitle: erpJsonText(j, "subtitle"),
+            status: erpJsonText(j, "status", fallback: "Draft"),
+            date: erpJsonText(j, "date"),
             amount: (j["amount"] as? NSNumber)?.doubleValue,
             fields: fields
         )
