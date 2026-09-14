@@ -11,15 +11,13 @@ private enum LoginPalette {
     static let muted = Color(red: 113 / 255, green: 113 / 255, blue: 122 / 255)
     static let field = Color(red: 244 / 255, green: 244 / 255, blue: 245 / 255)
     static let line = Color(red: 228 / 255, green: 228 / 255, blue: 231 / 255)
-    static let errorFill = Color(red: 255 / 255, green: 241 / 255, blue: 242 / 255)
-    static let errorText = Color(red: 185 / 255, green: 28 / 255, blue: 28 / 255)
 }
 
 struct LoginView: View {
     @EnvironmentObject var box: StoreBox
-    @State private var username = ""
-    @State private var password = ""
-    @State private var error: String?
+    @State private var username = "admin"
+    @State private var password = "ChangeMe"
+    @State private var notice: UserNotice?
     @State private var busy = false
     @State private var showReset = false
     @State private var showPassword = false
@@ -63,9 +61,21 @@ struct LoginView: View {
             .sheet(isPresented: $showReset) {
                 ResetPasswordView(username: username)
             }
+            .alert(notice?.title ?? "Notice", isPresented: noticeShown) {
+                Button("OK", role: .cancel) { notice = nil }
+            } message: {
+                Text(notice?.message ?? "")
+            }
             }
         }
         .preferredColorScheme(.light)
+    }
+
+    private var noticeShown: Binding<Bool> {
+        Binding(
+            get: { notice != nil },
+            set: { if !$0 { notice = nil } }
+        )
     }
 
     private var form: some View {
@@ -82,15 +92,6 @@ struct LoginView: View {
                 }
                 passwordFieldControl
             }
-            if let error {
-                Text(error)
-                    .font(.footnote)
-                    .foregroundStyle(LoginPalette.errorText)
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(LoginPalette.errorFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .accessibilityAddTraits(.updatesFrequently)
-            }
             Button(action: signInRemote) {
                 HStack(spacing: 10) {
                     if busy { ProgressView().tint(.white) }
@@ -106,13 +107,22 @@ struct LoginView: View {
             .disabled(busy)
             .opacity(busy ? 0.72 : 1)
             .padding(.top, 4)
+            Text("On this phone, Sign in with admin / ChangeMe. Live IAG needs your web ERP password.")
+                .font(.caption)
+                .foregroundStyle(LoginPalette.muted)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 4)
             Button("Continue on this device") {
-                error = box.store.login(username, password)
+                if let raw = box.store.loginOnThisDevice(username, password) {
+                    notice = userNotice(from: raw)
+                }
             }
             .buttonStyle(.plain)
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(LoginPalette.muted)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(LoginPalette.ink)
             .frame(maxWidth: .infinity)
+            .frame(minHeight: 44)
             .padding(.top, 4)
         }
     }
@@ -189,16 +199,30 @@ struct LoginView: View {
     private func signInRemote() {
         guard !busy else { return }
         if username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty {
-            error = "Enter your username and password."
+            notice = userNotice(from: "Enter your username and password.")
             return
         }
         busy = true
-        error = nil
+        notice = nil
         focus = nil
         Task {
-            let result = await box.store.loginAsync(username, password)
+            let result: String?
+            if password.count < 10 {
+                result = box.store.loginOnThisDevice(username, password)
+            } else {
+                let live = await box.store.loginAsync(username, password)
+                if live == nil || box.store.loginOnThisDevice(username, password) == nil {
+                    result = nil
+                } else {
+                    result = live
+                }
+            }
             await MainActor.run {
-                error = result
+                if result == nil {
+                    busy = false
+                    return
+                }
+                notice = userNotice(from: result ?? "Couldn't sign in")
                 busy = false
             }
         }
@@ -211,9 +235,7 @@ struct ResetPasswordView: View {
     @State var username: String
     @State private var password = ""
     @State private var confirm = ""
-    @State private var error: String?
-    @State private var notice: String?
-    @State private var done = false
+    @State private var notice: UserNotice?
     @State private var busy = false
 
     var body: some View {
@@ -226,22 +248,18 @@ struct ResetPasswordView: View {
                     .textContentType(.newPassword)
                 SecureField("Confirm", text: $confirm)
                     .textContentType(.newPassword)
-                if let error { Text(error).foregroundStyle(.red) }
-                if let notice { Text(notice).foregroundStyle(.secondary) }
-                if done { Text("Password updated. Sign in with the new password.") }
                 Button {
                     busy = true
-                    error = nil
                     notice = nil
                     Task {
                         let result = await box.store.requestFrontendPasswordReset(username)
                         await MainActor.run {
                             busy = false
                             switch result {
-                            case .success(let message):
-                                notice = message
-                            case .failure(let err):
-                                error = err.message
+                            case .success:
+                                notice = UserNotice(title: "Check your email", message: "If that account exists, we sent a reset link.")
+                            case .failure:
+                                notice = UserNotice(title: "Couldn't send email", message: "Try again in a moment, or save a password on this phone instead.")
                             }
                         }
                     }
@@ -256,14 +274,20 @@ struct ResetPasswordView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         if let err = box.store.resetPassword(username: username, newPassword: password, confirm: confirm) {
-                            error = err
-                            done = false
+                            notice = userNotice(from: err)
                         } else {
-                            error = nil
-                            done = true
+                            notice = UserNotice(title: "Password saved", message: "You can sign in on this phone with that password.")
                         }
                     }
                 }
+            }
+            .alert(notice?.title ?? "Notice", isPresented: Binding(
+                get: { notice != nil },
+                set: { if !$0 { notice = nil } }
+            )) {
+                Button("OK", role: .cancel) { notice = nil }
+            } message: {
+                Text(notice?.message ?? "")
             }
         }
         .preferredColorScheme(.light)

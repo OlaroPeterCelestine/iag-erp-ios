@@ -89,7 +89,23 @@ public final class ErpStore {
     }
 
     public var launcherQuickActions: [QuickAction] {
-        quickActionCatalog.filter { $0.appId == nil && allowsQuickAction($0) }
+        var out: [QuickAction] = []
+        for action in quickActionCatalog where action.appId == nil && allowsQuickAction(action) {
+            out.append(action)
+        }
+        var seenApps = Set<String>()
+        let visible = Set(visibleSuiteApps.map(\.id))
+        for action in quickActionCatalog {
+            guard let appId = action.appId, visible.contains(appId), !seenApps.contains(appId) else { continue }
+            guard allowsQuickAction(action) else { continue }
+            seenApps.insert(appId)
+            out.append(action)
+        }
+        return out
+    }
+
+    public func recordCount(forApp app: SuiteApp) -> Int {
+        records.filter { app.moduleIds.contains($0.moduleId) && canOpen($0.moduleId) }.count
     }
 
     public var welcomeStats: [WelcomeStat] {
@@ -419,13 +435,14 @@ public final class ErpStore {
     }
 
     public func knownUsername(_ username: String) -> Bool {
-        let u = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let u = canonicalLoginUsername(username)
         return demoAccountFor(u) != nil || workspaceUserFor(u) != nil
     }
 
     public func accountFor(_ username: String) -> AuthUser? {
         if let demo = demoAccountFor(username) { return AuthUser.demo(demo.username) }
-        guard let custom = workspaceUserFor(username) else { return nil }
+        let u = canonicalLoginUsername(username)
+        guard let custom = workspaceUserFor(u) else { return nil }
         return AuthUser(username: custom.username, name: custom.name.isEmpty ? custom.username : custom.name, role: custom.role, email: custom.email, phone: custom.phone, title: custom.title)
     }
 
@@ -435,13 +452,26 @@ public final class ErpStore {
 
     @discardableResult
     public func login(_ username: String, _ password: String, departmentId: String? = nil) -> String? {
-        let u = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard let nextUser = accountFor(u) else { return "Unknown user." }
+        guard let nextUser = accountFor(username) else { return "Unknown user." }
+        let u = nextUser.username.lowercased()
         if passwords[u]?.isEmpty != false {
             return "No password set. Use Forgot password to create one."
         }
         if !passwordMatches(u, password) { return "Wrong password." }
         return adoptUser(nextUser, departmentId: departmentId)
+    }
+
+    /// Offline trial: saves the typed password on this phone, then signs in locally.
+    @discardableResult
+    public func loginOnThisDevice(_ username: String, _ password: String, departmentId: String? = nil) -> String? {
+        let missing = login(username, password, departmentId: departmentId)
+        if missing == "No password set. Use Forgot password to create one." || missing == "Wrong password." {
+            if let err = resetPassword(username: username, newPassword: password, confirm: password) {
+                return err
+            }
+            return login(username, password, departmentId: departmentId)
+        }
+        return missing
     }
 
     @discardableResult
@@ -461,7 +491,7 @@ public final class ErpStore {
             return adopted
         case .failure(let error) where error.isNetwork:
             lastRemoteError = error.message
-            if passwords[u.lowercased()]?.isEmpty == false {
+            if passwords[canonicalLoginUsername(u)]?.isEmpty == false {
                 return login(u, password, departmentId: departmentId)
             }
             return error.message
@@ -478,7 +508,7 @@ public final class ErpStore {
     /// password is rejected by Postgres after the first forced change.
     public static func describeLiveLoginFailure(password: String, apiMessage: String) -> String {
         if password.count < 10 {
-            return "The live workspace rejected this password. Use the same password as the web ERP (at least 10 characters) — not the old short demo login."
+            return "Live sign-in needs your web ERP password (10+ characters). Tap Continue on this device to try the app here."
         }
         return apiMessage
     }
@@ -800,7 +830,7 @@ public final class ErpStore {
 
     @discardableResult
     public func resetPassword(username: String, newPassword: String, confirm: String) -> String? {
-        let u = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let u = canonicalLoginUsername(username)
         if !knownUsername(u) { return "Unknown user." }
         if newPassword.count < 6 { return "Use at least 6 characters." }
         if newPassword != confirm { return "Passwords do not match." }

@@ -300,6 +300,15 @@ final class RbacTests: XCTestCase {
         XCTAssertNil(s.login("admin", testPassword))
         XCTAssertTrue(s.launcherQuickActions.contains { $0.id == "clock" })
         XCTAssertTrue(s.launcherQuickActions.contains { $0.id == "approvals" })
+        XCTAssertTrue(s.launcherQuickActions.contains { $0.id == "access" })
+        XCTAssertEqual(
+            Set(s.launcherQuickActions.compactMap(\.appId)),
+            Set(s.visibleSuiteApps.map(\.id))
+        )
+        XCTAssertTrue(s.launcherQuickActions.contains { $0.id == "receipt" })
+        XCTAssertTrue(s.launcherQuickActions.contains { $0.id == "invoice" })
+        XCTAssertTrue(s.launcherQuickActions.contains { $0.id == "lead" })
+        XCTAssertTrue(s.launcherQuickActions.contains { $0.id == "po" })
         s.openApp("finance")
         let financeIds = s.homeQuickActions.map(\.id)
         XCTAssertTrue(financeIds.contains("clock"))
@@ -364,6 +373,39 @@ final class RbacTests: XCTestCase {
         let raw = persistence.get(storeKey) ?? ""
         XCTAssertFalse(raw.contains(testPassword))
         XCTAssertTrue(raw.contains(passwordDigest("admin", testPassword)))
+    }
+
+    func testContinueOnThisDeviceSavesFirstPasswordAndAcceptsLiveEmail() {
+        let s = ErpStore(persistence: MemoryKeyValueStore())
+        s.load()
+        XCTAssertNil(s.loginOnThisDevice("admin@iag.local", "ChangeMe"))
+        XCTAssertTrue(s.isSignedIn)
+        XCTAssertEqual(s.user?.username, "admin")
+        XCTAssertFalse(s.remoteSession)
+        s.logout()
+        XCTAssertNil(s.login("admin", "ChangeMe"))
+    }
+
+    func testContinueOnThisDeviceReplacesWrongLocalPassword() {
+        let s = ErpStore(persistence: MemoryKeyValueStore())
+        s.load()
+        XCTAssertNil(s.loginOnThisDevice("admin", "ChangeMe"))
+        s.logout()
+        XCTAssertNil(s.loginOnThisDevice("admin", "NewPass1"))
+        s.logout()
+        XCTAssertNil(s.login("admin", "NewPass1"))
+        XCTAssertEqual(s.login("admin", "ChangeMe"), "Wrong password.")
+    }
+
+    func testUserNoticeHidesTechnicalLoginErrors() {
+        XCTAssertEqual(userNotice(from: "Wrong password.").title, "Couldn't sign in")
+        XCTAssertEqual(
+            userNotice(from: ErpStore.describeLiveLoginFailure(password: "shortpw", apiMessage: "Invalid email/username or password.")).title,
+            "Couldn't sign in"
+        )
+        XCTAssertFalse(userNotice(from: "HTTP 401 Unauthorized").message.lowercased().contains("401"))
+        XCTAssertEqual(userNotice(from: "Can't reach the workspace.").title, "No connection")
+        XCTAssertEqual(userNotice(from: "Use at least 6 characters.").title, "Password too short")
     }
 
     func testLegacyPlaintextPasswordsAreMigratedOnLoad() {

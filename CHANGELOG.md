@@ -16,6 +16,8 @@ The marketing version in the Xcode target (`1.0.0`) is the source of truth.
 - Separate full apps after sign-in: Finance, Sales, CRM, POS, Procurement, Production, Fleet, Logistics, Projects, Contract Management, HR, Security, Quality, Requests, and DMS
 - Sign-in, home screen, and account screens use the product name **IAG Central**
 - Sign-in uses the official Inspire Africa Group logo
+- Splash screen and app icon use the official IAG color logo on black
+- Home follows mobile UX: large greeting, a few Do now shortcuts, colorful app tiles, and no empty sections
 - Sign-in is a plain white form: black logo, labeled fields, an eye to show the password, and a solid Sign in button. The workspace URL is not shown.
 - After sign-in, roles come from `GET /api/auth/roles` (Postgres), not only the on-device catalog
 - Item record CRUD (`POST`/`PATCH`/`DELETE /api/records/:module/:entity`) and the approval chain (`POST /api/approvals/:entity/:id/advance|reject`) so IPC and other chain desks do not PATCH `Approved`
@@ -24,7 +26,8 @@ The marketing version in the Xcode target (`1.0.0`) is the source of truth.
 ### Changed
 
 - Sign-in no longer ships a shared demo password. Secrets are hashed on device and created with Forgot password.
-- Live sign-in uses the web ERP password. A short demo password is rejected with a clear error; Continue on this device still uses a local password from Forgot password.
+- Live sign-in uses the web ERP password (10+ characters). Continue on this device now saves the first local password and accepts `admin@iag.local`.
+- Sign-in errors open a short pop-up instead of showing API text.
 
 ## [1.0.0] - 2026-09-14
 

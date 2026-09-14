@@ -282,8 +282,22 @@ public let demoAccounts: [DemoAccount] = [
     DemoAccount(username: "approver", name: "Ava Approver", role: "Approver", title: "Notify only", email: "approver@iag.africa", phone: ""),
 ]
 
-public func demoAccountFor(_ username: String) -> DemoAccount? {
+public func canonicalLoginUsername(_ username: String) -> String {
     let u = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    if let demo = demoAccounts.first(where: { $0.username == u || $0.email.lowercased() == u }) {
+        return demo.username
+    }
+    if let at = u.firstIndex(of: "@") {
+        let local = String(u[..<at])
+        if demoAccounts.contains(where: { $0.username == local }) {
+            return local
+        }
+    }
+    return u
+}
+
+public func demoAccountFor(_ username: String) -> DemoAccount? {
+    let u = canonicalLoginUsername(username)
     return demoAccounts.first { $0.username == u }
 }
 
