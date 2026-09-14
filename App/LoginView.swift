@@ -9,47 +9,70 @@ struct LoginView: View {
     @State private var error: String?
     @State private var showReset = false
 
-    var selected: ErpModule? { box.store.moduleById(departmentId) }
-    var title: String { selected == nil ? "IAG Finance ERP" : "IAG \(selected!.label)" }
+    var selected: SuiteApp? { suiteAppById(departmentId) }
+    var title: String { selected == nil ? "IAG ERP" : "IAG \(selected!.label)" }
     var subtitle: String {
-        selected == nil ? "Inspire Africa Group · All departments" : "Inspire Africa Group · \(selected!.label)"
+        selected == nil ? "Sign in to open Finance, Procurement, Production, Security, or another app." : selected!.description
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
-                    Text("ERP iOS").font(.largeTitle.bold())
-                    Text(title).font(.title3.weight(.semibold))
-                    Text(subtitle).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    Text("Demo: admin, accountant, clerk, viewer, hr, contractor — password iagdemo")
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        IagMark(size: 52)
+                        Text(title)
+                            .font(.title.weight(.semibold))
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 24)
+
+                    VStack(spacing: 12) {
+                        TextField("Username", text: $username)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .padding(14)
+                            .iagCard()
+                        SecureField("Password", text: $password)
+                            .padding(14)
+                            .iagCard()
+                        Button("Forgot password?") { showReset = true }
+                            .font(.footnote.weight(.medium))
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                        Picker("App", selection: $departmentId) {
+                            Text("Choose after sign-in").tag("")
+                            ForEach(suiteApps) { app in
+                                Text(app.label).tag(app.id)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .iagCard()
+                        if let error {
+                            Text(error).font(.footnote).foregroundStyle(.red)
+                        }
+                        Button {
+                            error = box.store.login(username, password, departmentId: departmentId.isEmpty ? nil : departmentId)
+                        } label: {
+                            Text("Sign in")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(IagTheme.orange)
+                        .controlSize(.large)
+                    }
+
+                    Text("Demo · admin, clerk, hr, procurement · iagdemo")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                    TextField("Username", text: $username)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .textFieldStyle(.roundedBorder)
-                    SecureField("Password", text: $password)
-                        .textFieldStyle(.roundedBorder)
-                    Button("Forgot password?") { showReset = true }
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                    Picker("Department", selection: $departmentId) {
-                        Text("Finance ERP (all departments)").tag("")
-                        ForEach(box.store.modules, id: \.id) { module in
-                            Text(module.label).tag(module.id)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    if let error { Text(error).foregroundStyle(.red) }
-                    Button("Sign in") {
-                        error = box.store.login(username, password, departmentId: departmentId.isEmpty ? nil : departmentId)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color(red: 5 / 255, green: 150 / 255, blue: 105 / 255))
                 }
-                .padding(24)
+                .padding(20)
             }
+            .iagCanvas()
             .sheet(isPresented: $showReset) {
                 ResetPasswordView(username: username)
             }
@@ -76,6 +99,7 @@ struct ResetPasswordView: View {
                 if let error { Text(error).foregroundStyle(.red) }
                 if done { Text("Password updated. Sign in with the new password.") }
             }
+            .iagCanvas()
             .navigationTitle("Reset password")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }

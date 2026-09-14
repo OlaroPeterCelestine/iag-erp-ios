@@ -25,19 +25,18 @@ struct DepartmentView: View {
                                 EntityListView(moduleId: moduleId, entity: entity)
                             }
                         } label: {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(entity)
-                                    Text("\(store.count(moduleId: moduleId, entity: entity)) records")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                            }
+                            DeskRow(
+                                title: entity,
+                                subtitle: "\(store.count(moduleId: moduleId, entity: entity)) records",
+                                systemName: "square.grid.2x2",
+                                color: iagColor(module.color)
+                            )
                         }
                     }
                 }
             }
+            .listStyle(.insetGrouped)
+            .iagCanvas()
             .navigationTitle(module.label)
             .searchable(text: $query, prompt: "Find a feature")
         } else {
@@ -80,15 +79,23 @@ struct EntityListView: View {
                     NavigationLink {
                         RecordDetailView(recordId: rec.id)
                     } label: {
-                        VStack(alignment: .leading) {
-                            Text(rec.title)
-                            Text(rec.subtitle).font(.caption).foregroundStyle(.secondary)
-                            Text(rec.status).foregroundStyle(statusColor(rec.status))
-                            if let amount = rec.amount { Text(formatMoney(amount)).fontWeight(.semibold) }
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(rec.title).font(.body.weight(.semibold))
+                                Text(rec.subtitle).font(.caption).foregroundStyle(.secondary)
+                                if let amount = rec.amount {
+                                    Text(formatMoney(amount)).font(.subheadline.weight(.semibold))
+                                }
+                            }
+                            Spacer(minLength: 8)
+                            StatusPill(text: rec.status)
                         }
+                        .padding(.vertical, 4)
                     }
                 }
             }
+            .listStyle(.insetGrouped)
+            .iagCanvas()
             .navigationTitle(entity)
             .searchable(text: $query, prompt: "Filter records")
             .toolbar {
@@ -114,7 +121,7 @@ struct RecordDetailView: View {
                 Section {
                     Text(record.entity).foregroundStyle(.secondary)
                     Text(record.subtitle)
-                    Text(record.status).foregroundStyle(statusColor(record.status))
+                    StatusPill(text: record.status)
                     Text(record.date).foregroundStyle(.secondary)
                     if let amount = record.amount { Text(formatMoney(amount)).fontWeight(.bold) }
                     ForEach(record.fields.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
@@ -142,6 +149,7 @@ struct RecordDetailView: View {
                     }
                 }
             }
+            .iagCanvas()
             .navigationTitle(record.title)
         } else {
             ContentUnavailableView("Record not found", systemImage: "doc")
@@ -171,6 +179,7 @@ struct RecordFormView: View {
                 if let error { Text(error).foregroundStyle(.red) }
             }
         }
+        .iagCanvas()
         .navigationTitle("New \(entity)")
         .toolbar {
             Button("Save") {

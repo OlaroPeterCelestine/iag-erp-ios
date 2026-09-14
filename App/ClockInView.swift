@@ -75,15 +75,27 @@ struct ClockInView: View {
             return verifyAgainstZones(GeoPoint(latitude: lat, longitude: lng), store.geofenceZones(), accuracyMeters: gps.accuracy)
         }()
         List {
-            Section("You") {
-                Text(store.user?.name ?? "Staff")
-                Text(store.user?.role ?? "").foregroundStyle(.secondary)
-                if let open {
-                    Text("Checked in at \(recordField(open, "clockIn", "Clock in")) · \(open.subtitle)")
-                } else {
-                    Text("No open check-in today.").foregroundStyle(.secondary)
+            Section {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(store.user?.name ?? "Staff")
+                        .font(.title2.weight(.semibold))
+                    Text(store.user?.role ?? "")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    if let open {
+                        Text("Checked in at \(recordField(open, "clockIn", "Clock in")) · \(open.subtitle)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("No open check-in today.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                .padding(.vertical, 6)
+                .listRowBackground(Color.clear)
             }
+
             Section("Location") {
                 if let lat = gps.latitude, let lng = gps.longitude {
                     LabeledContent("GPS", value: String(format: "%.5f, %.5f", lat, lng))
@@ -95,7 +107,7 @@ struct ClockInView: View {
                     .disabled(gps.busy)
                 Button("Use IAG Head Office (demo)") { gps.useHq() }
                 if let check {
-                    Text(check.status).foregroundStyle(statusColor(check.status))
+                    StatusPill(text: check.status)
                     Text(check.note).font(.caption).foregroundStyle(.secondary)
                 }
                 if let err = gps.error {
@@ -105,16 +117,27 @@ struct ClockInView: View {
                     Text(message).foregroundStyle(.secondary)
                 }
             }
-            Section("Punch") {
-                Button(open == nil ? "Clock in" : "Clock out") {
+
+            Section {
+                Button {
                     guard let lat = gps.latitude, let lng = gps.longitude else {
                         message = "Capture GPS first, or use the Head Office demo pin."
                         return
                     }
                     message = store.punch(kind: open == nil ? "in" : "out", latitude: lat, longitude: lng, accuracy: gps.accuracy)
+                } label: {
+                    Text(open == nil ? "Clock in" : "Clock out")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(IagTheme.orange)
+                .controlSize(.large)
                 .disabled(!store.canClockIn)
+                .listRowBackground(Color.clear)
             }
+
             Section("My punches") {
                 let punches = store.myPunches()
                 if punches.isEmpty {
@@ -124,17 +147,19 @@ struct ClockInView: View {
                         NavigationLink {
                             RecordDetailView(recordId: rec.id)
                         } label: {
-                            VStack(alignment: .leading) {
-                                Text(rec.title)
-                                Text("\(rec.status) · \(recordField(rec, "clockIn", "Clock in"))–\(recordField(rec, "clockOut", "Clock out"))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+                            DeskRow(
+                                title: rec.title,
+                                subtitle: "\(recordField(rec, "clockIn", "Clock in"))–\(recordField(rec, "clockOut", "Clock out"))",
+                                systemName: "clock",
+                                status: rec.status
+                            )
                         }
                     }
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .iagCanvas()
         .navigationTitle("Clock In")
         .onAppear { gps.refresh() }
     }
