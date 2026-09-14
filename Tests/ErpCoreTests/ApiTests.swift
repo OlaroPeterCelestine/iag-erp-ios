@@ -232,6 +232,13 @@ final class ApiTests: XCTestCase {
         let rejected = await s.loginAsync("admin", "unit-test-login")
         XCTAssertEqual(rejected, "Invalid email/username or password.")
         XCTAssertFalse(s.isSignedIn)
+
+        let shortRejected = await s.loginAsync("admin", "shortpw")
+        XCTAssertEqual(
+            shortRejected,
+            ErpStore.describeLiveLoginFailure(password: "shortpw", apiMessage: "Invalid email/username or password.")
+        )
+        XCTAssertFalse(s.isSignedIn)
     }
 
     func testRefreshEntityMapsFrontendRecords() async {

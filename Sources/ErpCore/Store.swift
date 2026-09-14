@@ -467,8 +467,20 @@ public final class ErpStore {
             return error.message
         case .failure(let error):
             lastRemoteError = error.message
+            if error.isUnauthorized {
+                return ErpStore.describeLiveLoginFailure(password: password, apiMessage: error.message)
+            }
             return error.message
         }
+    }
+
+    /// Live accounts must use the web ERP password. The old 7-character demo
+    /// password is rejected by Postgres after the first forced change.
+    public static func describeLiveLoginFailure(password: String, apiMessage: String) -> String {
+        if password.count < 10 {
+            return "The live workspace rejected this password. Use the same password as the web ERP (at least 10 characters) — not the old short demo login."
+        }
+        return apiMessage
     }
 
     public func resumeRemoteSession() async {

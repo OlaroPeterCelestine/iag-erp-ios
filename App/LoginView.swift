@@ -5,6 +5,16 @@ private enum LoginField: Hashable {
     case username, password
 }
 
+private enum LoginPalette {
+    static let canvas = Color.white
+    static let ink = Color(red: 24 / 255, green: 24 / 255, blue: 27 / 255)
+    static let muted = Color(red: 113 / 255, green: 113 / 255, blue: 122 / 255)
+    static let field = Color(red: 244 / 255, green: 244 / 255, blue: 245 / 255)
+    static let line = Color(red: 228 / 255, green: 228 / 255, blue: 231 / 255)
+    static let errorFill = Color(red: 255 / 255, green: 241 / 255, blue: 242 / 255)
+    static let errorText = Color(red: 185 / 255, green: 28 / 255, blue: 28 / 255)
+}
+
 struct LoginView: View {
     @EnvironmentObject var box: StoreBox
     @State private var username = ""
@@ -17,207 +27,181 @@ struct LoginView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                LoginAtmosphere()
-                ScrollView {
-                    VStack(spacing: 0) {
-                        hero
-                        formCard
-                            .padding(.horizontal, 20)
-                            .padding(.top, 8)
-                        Text("Inspire Africa Group")
-                            .font(.caption2.weight(.medium))
-                            .tracking(1.4)
-                            .foregroundStyle(.white.opacity(0.38))
-                            .padding(.top, 28)
-                            .padding(.bottom, 36)
-                    }
+            GeometryReader { geo in
+            ScrollView {
+                VStack(spacing: 0) {
+                    IagBrandLogo(height: 56, mono: true)
+                        .padding(.top, 24)
+                    Text(appName)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(LoginPalette.ink)
+                        .padding(.top, 16)
+                    Text("Sign in")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(LoginPalette.ink)
+                        .padding(.top, 28)
+                    Text("Enter your username and password to continue.")
+                        .font(.subheadline)
+                        .foregroundStyle(LoginPalette.muted)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 6)
+                    form
+                        .padding(.top, 28)
+                    Text("© Inspire Africa Group")
+                        .font(.caption)
+                        .foregroundStyle(LoginPalette.muted)
+                        .padding(.top, 32)
+                        .padding(.bottom, 24)
                 }
-                .scrollDismissesKeyboard(.interactively)
+                .frame(maxWidth: 400)
+                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .center)
             }
+            .background(LoginPalette.canvas.ignoresSafeArea())
+            .scrollDismissesKeyboard(.interactively)
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showReset) {
                 ResetPasswordView(username: username)
             }
-        }
-    }
-
-    private var hero: some View {
-        VStack(spacing: 18) {
-            IagBrandLogo(height: 118)
-                .padding(.top, 56)
-                .shadow(color: IagTheme.orange.opacity(0.28), radius: 28, y: 10)
-            VStack(spacing: 8) {
-                Text("FINANCE & OPERATIONS")
-                    .font(.caption.weight(.semibold))
-                    .tracking(2.4)
-                    .foregroundStyle(IagTheme.orange)
-                Text(appName)
-                    .font(.system(size: 34, weight: .bold, design: .default))
-                    .foregroundStyle(.white)
-                Text("Sign in to your workspace.")
-                    .font(.body)
-                    .foregroundStyle(Color.white.opacity(0.62))
-                Text("Finance  ·  Sales  ·  Projects  ·  HR")
-                    .font(.caption)
-                    .foregroundStyle(Color.white.opacity(0.38))
-                    .padding(.top, 4)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.bottom, 28)
+        .preferredColorScheme(.light)
     }
 
-    private var formCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private var form: some View {
+        VStack(alignment: .leading, spacing: 16) {
             loginField("Username", text: $username, field: .username)
-            passwordField
-            Button("Forgot password?") { showReset = true }
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(IagTheme.orange)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    fieldLabel("Password")
+                    Spacer()
+                    Button("Forgot password?") { showReset = true }
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(LoginPalette.ink)
+                        .buttonStyle(.plain)
+                }
+                passwordFieldControl
+            }
             if let error {
                 Text(error)
                     .font(.footnote)
-                    .foregroundStyle(Color(red: 1, green: 0.42, blue: 0.38))
+                    .foregroundStyle(LoginPalette.errorText)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(LoginPalette.errorFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .accessibilityAddTraits(.updatesFrequently)
             }
-            Button {
-                busy = true
-                error = nil
-                focus = nil
-                Task {
-                    let result = await box.store.loginAsync(username, password)
-                    await MainActor.run {
-                        error = result
-                        busy = false
-                    }
-                }
-            } label: {
+            Button(action: signInRemote) {
                 HStack(spacing: 10) {
                     if busy { ProgressView().tint(.white) }
                     Text(busy ? "Signing in…" : "Sign in")
-                        .font(.headline)
+                        .font(.body.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .frame(minHeight: 48)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            .background(
-                LinearGradient(
-                    colors: [IagTheme.orange, IagTheme.orangeDeep],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-            )
-            .shadow(color: IagTheme.orange.opacity(0.38), radius: 16, y: 8)
+            .background(LoginPalette.ink, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .disabled(busy)
             .opacity(busy ? 0.72 : 1)
+            .padding(.top, 4)
+            Button("Continue on this device") {
+                error = box.store.login(username, password)
+            }
+            .buttonStyle(.plain)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(LoginPalette.muted)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 4)
         }
-        .padding(22)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.35), radius: 30, y: 16)
     }
 
     @ViewBuilder
     private func loginField(_ title: String, text: Binding<String>, field: LoginField) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title.uppercased())
-                .font(.caption2.weight(.semibold))
-                .tracking(0.8)
-                .foregroundStyle(.white.opacity(0.55))
-            TextField("", text: text, prompt: Text(title).foregroundStyle(Color.white.opacity(0.32)))
+            fieldLabel(title)
+            TextField("Enter \(title.lowercased())", text: text)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                .textContentType(field == .username ? .username : .none)
+                .textContentType(.username)
+                .submitLabel(.next)
                 .focused($focus, equals: field)
-                .foregroundStyle(.white)
-                .tint(IagTheme.orange)
+                .foregroundStyle(LoginPalette.ink)
+                .tint(LoginPalette.ink)
                 .padding(.horizontal, 14)
-                .padding(.vertical, 14)
-                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .frame(minHeight: 48)
+                .background(LoginPalette.field, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(focus == field ? IagTheme.orange.opacity(0.85) : Color.white.opacity(0.1), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(focus == field ? LoginPalette.ink : LoginPalette.line, lineWidth: 1)
                 )
+                .onSubmit { focus = .password }
         }
     }
 
-    private var passwordField: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("PASSWORD")
-                .font(.caption2.weight(.semibold))
-                .tracking(0.8)
-                .foregroundStyle(.white.opacity(0.55))
-            HStack(spacing: 8) {
-                Group {
-                    if showPassword {
-                        TextField("", text: $password, prompt: Text("Password").foregroundStyle(Color.white.opacity(0.32)))
-                    } else {
-                        SecureField("", text: $password, prompt: Text("Password").foregroundStyle(Color.white.opacity(0.32)))
-                    }
+    private var passwordFieldControl: some View {
+        ZStack(alignment: .trailing) {
+            Group {
+                if showPassword {
+                    TextField("Enter password", text: $password)
+                } else {
+                    SecureField("Enter password", text: $password)
                 }
-                .textContentType(.password)
-                .focused($focus, equals: .password)
-                .foregroundStyle(.white)
-                .tint(IagTheme.orange)
-                Button {
-                    showPassword.toggle()
-                } label: {
-                    Image(systemName: showPassword ? "eye.slash" : "eye")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.55))
-                }
-                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 14)
-            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(focus == .password ? IagTheme.orange.opacity(0.85) : Color.white.opacity(0.1), lineWidth: 1)
-            )
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .textContentType(.password)
+            .submitLabel(.go)
+            .focused($focus, equals: .password)
+            .foregroundStyle(LoginPalette.ink)
+            .tint(LoginPalette.ink)
+            .padding(.leading, 14)
+            .padding(.trailing, 52)
+            .frame(minHeight: 48)
+            .onSubmit(signInRemote)
+            Button {
+                showPassword.toggle()
+            } label: {
+                Image(systemName: showPassword ? "eye.slash" : "eye")
+                    .font(.body)
+                    .foregroundStyle(LoginPalette.muted)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(showPassword ? "Hide password" : "Show password")
+            .padding(.trailing, 2)
         }
+        .background(LoginPalette.field, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(focus == .password ? LoginPalette.ink : LoginPalette.line, lineWidth: 1)
+        )
     }
-}
 
-struct LoginAtmosphere: View {
-    var body: some View {
-        ZStack {
-            Color(red: 0.04, green: 0.04, blue: 0.05)
-            Circle()
-                .fill(Color(red: 0.09, green: 0.62, blue: 0.29).opacity(0.28))
-                .frame(width: 280, height: 280)
-                .blur(radius: 70)
-                .offset(x: -90, y: -40)
-            Circle()
-                .fill(IagTheme.orange.opacity(0.32))
-                .frame(width: 260, height: 260)
-                .blur(radius: 80)
-                .offset(x: 110, y: 10)
-            Circle()
-                .fill(Color(red: 0.05, green: 0.62, blue: 0.89).opacity(0.22))
-                .frame(width: 220, height: 220)
-                .blur(radius: 70)
-                .offset(x: 40, y: 160)
-            Circle()
-                .fill(Color(red: 0.86, green: 0.18, blue: 0.22).opacity(0.18))
-                .frame(width: 200, height: 200)
-                .blur(radius: 64)
-                .offset(x: -70, y: 220)
-            LinearGradient(
-                colors: [Color.black.opacity(0.05), Color.black.opacity(0.72)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+    private func fieldLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(LoginPalette.ink)
+    }
+
+    private func signInRemote() {
+        guard !busy else { return }
+        if username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty {
+            error = "Enter your username and password."
+            return
         }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
+        busy = true
+        error = nil
+        focus = nil
+        Task {
+            let result = await box.store.loginAsync(username, password)
+            await MainActor.run {
+                error = result
+                busy = false
+            }
+        }
     }
 }
 
@@ -237,8 +221,11 @@ struct ResetPasswordView: View {
             Form {
                 TextField("Username", text: $username)
                     .textInputAutocapitalization(.never)
+                    .textContentType(.username)
                 SecureField("New password on this device", text: $password)
+                    .textContentType(.newPassword)
                 SecureField("Confirm", text: $confirm)
+                    .textContentType(.newPassword)
                 if let error { Text(error).foregroundStyle(.red) }
                 if let notice { Text(notice).foregroundStyle(.secondary) }
                 if done { Text("Password updated. Sign in with the new password.") }
@@ -263,7 +250,6 @@ struct ResetPasswordView: View {
                 }
                 .disabled(busy)
             }
-            .iagCanvas()
             .navigationTitle("Reset password")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
@@ -280,5 +266,6 @@ struct ResetPasswordView: View {
                 }
             }
         }
+        .preferredColorScheme(.light)
     }
 }

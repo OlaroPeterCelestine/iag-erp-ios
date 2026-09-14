@@ -40,12 +40,12 @@ struct RootView: View {
         Group {
             if box.store.isSignedIn {
                 ShellView()
+                    .preferredColorScheme(box.store.themeMode == "dark" ? .dark : box.store.themeMode == "light" ? .light : nil)
             } else {
                 LoginView()
-                    .preferredColorScheme(.dark)
+                    .preferredColorScheme(.light)
             }
         }
-        .preferredColorScheme(box.store.themeMode == "dark" ? .dark : box.store.themeMode == "light" ? .light : nil)
     }
 }
 
