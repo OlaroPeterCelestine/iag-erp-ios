@@ -5,78 +5,96 @@ struct LoginView: View {
     @EnvironmentObject var box: StoreBox
     @State private var username = ""
     @State private var password = ""
-    @State private var departmentId = ""
     @State private var error: String?
+    @State private var busy = false
     @State private var showReset = false
-
-    var selected: SuiteApp? { suiteAppById(departmentId) }
-    var title: String { selected == nil ? "IAG ERP" : "IAG \(selected!.label)" }
-    var subtitle: String {
-        selected == nil ? "Sign in to open Finance, Procurement, Production, Security, or another app." : selected!.description
-    }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        IagMark(size: 52)
-                        Text(title)
-                            .font(.title.weight(.semibold))
-                        Text(subtitle)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.top, 24)
-
-                    VStack(spacing: 12) {
-                        TextField("Username", text: $username)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .padding(14)
-                            .iagCard()
-                        SecureField("Password", text: $password)
-                            .padding(14)
-                            .iagCard()
+            ZStack {
+                Color.black.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 28) {
+                        Spacer().frame(height: 56)
+                        IagBrandLogo(height: 84, mono: true)
+                        VStack(spacing: 8) {
+                            Text(appName)
+                                .font(.system(size: 28, weight: .semibold))
+                                .foregroundStyle(.white)
+                            Text("Sign in to continue")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.white.opacity(0.55))
+                        }
+                        VStack(spacing: 12) {
+                            loginField("Username", text: $username, secure: false)
+                            loginField("Password", text: $password, secure: true)
+                        }
                         Button("Forgot password?") { showReset = true }
                             .font(.footnote.weight(.medium))
+                            .foregroundStyle(Color.white.opacity(0.7))
                             .frame(maxWidth: .infinity, alignment: .trailing)
-                        Picker("App", selection: $departmentId) {
-                            Text("Choose after sign-in").tag("")
-                            ForEach(suiteApps) { app in
-                                Text(app.label).tag(app.id)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .iagCard()
                         if let error {
-                            Text(error).font(.footnote).foregroundStyle(.red)
+                            Text(error)
+                                .font(.footnote)
+                                .foregroundStyle(Color(red: 1, green: 0.45, blue: 0.4))
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         Button {
-                            error = box.store.login(username, password, departmentId: departmentId.isEmpty ? nil : departmentId)
+                            busy = true
+                            error = nil
+                            Task {
+                                let result = await box.store.loginAsync(username, password)
+                                await MainActor.run {
+                                    error = result
+                                    busy = false
+                                }
+                            }
                         } label: {
-                            Text("Sign in")
-                                .font(.headline)
-                                .frame(maxWidth: .infinity)
+                            HStack {
+                                if busy { ProgressView().tint(.black) }
+                                Text(busy ? "Signing in…" : "Sign in")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .padding(.vertical, 4)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(IagTheme.orange)
+                        .tint(.white)
+                        .foregroundStyle(.black)
                         .controlSize(.large)
+                        .disabled(busy)
                     }
-
-                    Text("Demo · admin, clerk, hr, procurement · iagdemo")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 40)
                 }
-                .padding(20)
             }
-            .iagCanvas()
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showReset) {
                 ResetPasswordView(username: username)
             }
         }
+    }
+
+    @ViewBuilder
+    private func loginField(_ title: String, text: Binding<String>, secure: Bool) -> some View {
+        Group {
+            if secure {
+                SecureField("", text: text, prompt: Text(title).foregroundStyle(Color.white.opacity(0.4)))
+            } else {
+                TextField("", text: text, prompt: Text(title).foregroundStyle(Color.white.opacity(0.4)))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            }
+        }
+        .foregroundStyle(.white)
+        .tint(.white)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
     }
 }
 
@@ -87,17 +105,40 @@ struct ResetPasswordView: View {
     @State private var password = ""
     @State private var confirm = ""
     @State private var error: String?
+    @State private var notice: String?
     @State private var done = false
+    @State private var busy = false
 
     var body: some View {
         NavigationStack {
             Form {
                 TextField("Username", text: $username)
                     .textInputAutocapitalization(.never)
-                SecureField("New password", text: $password)
+                SecureField("New password on this device", text: $password)
                 SecureField("Confirm", text: $confirm)
                 if let error { Text(error).foregroundStyle(.red) }
+                if let notice { Text(notice).foregroundStyle(.secondary) }
                 if done { Text("Password updated. Sign in with the new password.") }
+                Button {
+                    busy = true
+                    error = nil
+                    notice = nil
+                    Task {
+                        let result = await box.store.requestFrontendPasswordReset(username)
+                        await MainActor.run {
+                            busy = false
+                            switch result {
+                            case .success(let message):
+                                notice = message
+                            case .failure(let err):
+                                error = err.message
+                            }
+                        }
+                    }
+                } label: {
+                    Text(busy ? "Sending…" : "Email reset code")
+                }
+                .disabled(busy)
             }
             .iagCanvas()
             .navigationTitle("Reset password")

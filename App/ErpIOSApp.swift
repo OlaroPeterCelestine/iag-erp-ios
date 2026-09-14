@@ -20,12 +20,15 @@ final class StoreBox: ObservableObject {
     @Published var tick: Int = 0
 
     init() {
-        let store = ErpStore(persistence: UserDefaultsStore())
+        let persistence = UserDefaultsStore()
+        let origin = ErpConfig.origin(from: persistence)
+        let store = ErpStore(persistence: persistence, api: ErpApi(origin: origin))
         store.load()
         self.store = store
         store.addListener { [weak self] in
             DispatchQueue.main.async { self?.tick += 1 }
         }
+        Task { await store.resumeRemoteSession() }
     }
 }
 
@@ -39,6 +42,7 @@ struct RootView: View {
                 ShellView()
             } else {
                 LoginView()
+                    .preferredColorScheme(.dark)
             }
         }
         .preferredColorScheme(box.store.themeMode == "dark" ? .dark : box.store.themeMode == "light" ? .light : nil)
@@ -47,10 +51,12 @@ struct RootView: View {
 
 enum IagTheme {
     static let orange = Color(red: 249 / 255, green: 115 / 255, blue: 22 / 255)
+    static let orangeDeep = Color(red: 234 / 255, green: 88 / 255, blue: 12 / 255)
     static let success = Color(red: 5 / 255, green: 150 / 255, blue: 105 / 255)
     static let canvas = Color(.systemGroupedBackground)
     static let card = Color(.secondarySystemGroupedBackground)
     static let muted = Color.secondary
+    static let radius: CGFloat = 16
 }
 
 func iagGreeting() -> String {
@@ -82,14 +88,27 @@ func statusColor(_ status: String) -> Color {
     return IagTheme.muted
 }
 
+struct IagBrandLogo: View {
+    var height: CGFloat = 128
+    var mono: Bool = false
+    var body: some View {
+        Image(mono ? "IagLogoMono" : "IagLogo")
+            .resizable()
+            .renderingMode(.original)
+            .scaledToFit()
+            .frame(maxWidth: 280, maxHeight: height)
+            .accessibilityLabel("Inspire Africa Group")
+    }
+}
+
 struct IagMark: View {
     var size: CGFloat = 56
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
                 .fill(IagTheme.orange)
             Text("IAG")
-                .font(.system(size: size * 0.28, weight: .bold))
+                .font(.system(size: size * 0.28, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
         }
         .frame(width: size, height: size)
@@ -101,13 +120,13 @@ struct IagIconWell: View {
     var color: Color = IagTheme.orange
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(color.opacity(0.12))
             Image(systemName: systemName)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(color)
         }
-        .frame(width: 36, height: 36)
+        .frame(width: 40, height: 40)
     }
 }
 
@@ -133,7 +152,7 @@ struct DeskRow: View {
     var body: some View {
         HStack(spacing: 12) {
             IagIconWell(systemName: systemName, color: color)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.body.weight(.semibold))
                 Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2)
             }
@@ -141,6 +160,50 @@ struct DeskRow: View {
             if let status { StatusPill(text: status) }
         }
         .padding(.vertical, 2)
+        .contentShape(Rectangle())
+    }
+}
+
+struct IagSectionHeader: View {
+    var title: String
+    var accessory: String? = nil
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+            Spacer()
+            if let accessory {
+                Text(accessory)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(IagTheme.orange)
+            }
+        }
+    }
+}
+
+struct IagEmptyHint: View {
+    var text: String
+    var body: some View {
+        Text(text)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+    }
+}
+
+struct IagGrouped<Content: View>: View {
+    @ViewBuilder var content: Content
+    var body: some View {
+        VStack(spacing: 0) { content }
+            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
+    }
+}
+
+struct IagRowDivider: View {
+    var body: some View {
+        Divider().padding(.leading, 68)
     }
 }
 
@@ -148,22 +211,24 @@ struct AppTile: View {
     let app: SuiteApp
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             IagIconWell(systemName: app.icon, color: iagColor(app.color))
-            Text(app.label)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.leading)
-            Text(app.description)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(app.label)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Text(app.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
             Spacer(minLength: 0)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 128, alignment: .topLeading)
-        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(16)
+        .frame(maxWidth: .infinity, minHeight: 118, alignment: .topLeading)
+        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
     }
 }
 
@@ -217,9 +282,9 @@ struct KpiChip: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
-        .padding(12)
-        .frame(minWidth: 132, alignment: .leading)
-        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(14)
+        .frame(minWidth: 136, alignment: .leading)
+        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
     }
 }
 
@@ -229,35 +294,54 @@ struct WelcomeCard: View {
     var stats: [WelcomeStat]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Welcome back")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.85))
-                Text("\(iagGreeting()), \(name)")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(.white)
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.85))
-            }
-            HStack(alignment: .top, spacing: 8) {
-                ForEach(stats) { stat in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(stat.value)
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(.white)
-                        Text(stat.label)
-                            .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.8))
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(iagGreeting()), \(name)")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(2)
                 }
+                Spacer(minLength: 8)
+                IagMark(size: 36)
+            }
+            if !stats.isEmpty {
+                HStack(spacing: 0) {
+                    ForEach(Array(stats.enumerated()), id: \.element.id) { index, stat in
+                        if index > 0 {
+                            Rectangle()
+                                .fill(.white.opacity(0.22))
+                                .frame(width: 1, height: 28)
+                                .padding(.horizontal, 8)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(stat.value)
+                                .font(.title3.weight(.bold))
+                                .foregroundStyle(.white)
+                            Text(stat.label)
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.78))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding(12)
+                .background(.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(IagTheme.orange, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(
+            LinearGradient(
+                colors: [IagTheme.orange, IagTheme.orangeDeep],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
+        )
     }
 }
 
@@ -285,6 +369,6 @@ extension View {
     }
 
     func iagCard() -> some View {
-        self.background(IagTheme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        self.background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
     }
 }

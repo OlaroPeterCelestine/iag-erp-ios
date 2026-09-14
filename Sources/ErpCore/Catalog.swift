@@ -37,18 +37,23 @@ public func erpModules() -> [ErpModule] {
             seedRecord(module: "projects", entity: "Payment Requests (IPC)", title: "IPC-2026-006", subtitle: "Civil works — certificate 2", status: "Pending", amount: 48_000_000),
             seedRecord(module: "projects", entity: "Material Requests", title: "MR-2026-021", subtitle: "Cement and steel", status: "Approved"),
         ]),
-        ErpModule(id: "contract-manager", label: "Contract Manager", group: "Projects", description: "Contractors, contractor invoices, and contractor ledgers under a project.", icon: "doc.badge.checkmark", color: 0xFF047857, entities: ["Contractors", "Contractor Invoices", "Contractor Ledgers"], seed: [
+        ErpModule(id: "contract-manager", label: "Contract Management", group: "Projects", description: "Contracts, contractors, amendments, invoices, bonds, and completion certificates.", icon: "doc.badge.checkmark", color: 0xFF047857, entities: ["Contracts", "Contractors", "Contract Amendments", "Contractor Invoices", "Contractor Ledgers", "Performance Bonds", "Completion Certificates"], seed: [
+            seedRecord(module: "contract-manager", entity: "Contracts", title: "CTR-2026-012", subtitle: "Roastery civil works", status: "Active", amount: 180_000_000),
             seedRecord(module: "contract-manager", entity: "Contractors", title: "Mukwano Builders", subtitle: "CTR-012", status: "Active"),
+            seedRecord(module: "contract-manager", entity: "Contractor Invoices", title: "CINV-2026-008", subtitle: "Certificate 2", status: "Pending", amount: 48_000_000),
         ]),
-        ErpModule(id: "fleet", label: "Fleet", group: "Operations", description: "Vehicles, drivers, fuel, trips, maintenance, map analytics, and fleet cost.", icon: "truck.box", color: 0xFFD97706, entities: ["Vehicles", "Drivers", "Fuel Requests", "Fuel Logs", "Trip Requests", "Maintenance Requests", "Map Analytics", "Service Reminders", "Fleet Cost Report"], approvalEntities: ["Fuel Requests", "Trip Requests", "Maintenance Requests"], seed: [
+        ErpModule(id: "fleet", label: "Fleet", group: "Operations", description: "Vehicles, drivers, fuel, trips, maintenance, map analytics, and fleet cost.", icon: "car.fill", color: 0xFFD97706, entities: ["Vehicles", "Drivers", "Fuel Requests", "Fuel Logs", "Trip Requests", "Maintenance Requests", "Map Analytics", "Service Reminders", "Fleet Cost Report"], approvalEntities: ["Fuel Requests", "Trip Requests", "Maintenance Requests"], seed: [
             seedRecord(module: "fleet", entity: "Vehicles", title: "UAX 221K", subtitle: "Isuzu NPR", status: "Active"),
+            seedRecord(module: "fleet", entity: "Drivers", title: "Joseph Ssewanyana", subtitle: "DRV-008", status: "Active"),
             seedRecord(module: "fleet", entity: "Fuel Requests", title: "FUEL-2026-044", subtitle: "UAX 221K · Namanve", status: "Pending", amount: 420_000),
         ]),
         ErpModule(id: "security", label: "Security", group: "Operations", description: "Gate passes, visitor passes, and security incidents.", icon: "shield.checkered", color: 0xFF334155, entities: ["Gate Passes", "Visitor Passes", "Security Incidents"], seed: [
             seedRecord(module: "security", entity: "Visitor Passes", title: "VP-2026-331", subtitle: "URA audit team", status: "Open", date: todayIsoDate()),
         ]),
-        ErpModule(id: "crm", label: "CRM", group: "Commercial", description: "Leads, opportunities, contacts, follow-ups, and complaints.", icon: "person.3", color: 0xFFBE123C, entities: ["Leads", "Opportunities", "Contacts", "Follow-ups", "Complaints"], seed: [
+        ErpModule(id: "crm", label: "CRM", group: "Commercial", description: "Accounts, leads, opportunities, contacts, follow-ups, and complaints.", icon: "person.3", color: 0xFFBE123C, entities: ["Accounts", "Leads", "Opportunities", "Contacts", "Follow-ups", "Complaints", "Activities"], seed: [
+            seedRecord(module: "crm", entity: "Accounts", title: "Shoprite Uganda", subtitle: "Retail", status: "Active"),
             seedRecord(module: "crm", entity: "Leads", title: "Shoprite Lugogo", subtitle: "Retail listing", status: "Open"),
+            seedRecord(module: "crm", entity: "Opportunities", title: "OPP-2026-014", subtitle: "Listing pack · Q4", status: "Open", amount: 48_000_000),
         ]),
         ErpModule(id: "logistics", label: "Logistics", group: "Operations", description: "Shipments, dispatch board, routes, proof of delivery, and carriers.", icon: "map", color: 0xFF0F766E, entities: ["Shipments", "Dispatch Board", "Routes", "Proof of Delivery", "Carriers"], seed: [
             seedRecord(module: "logistics", entity: "Shipments", title: "SHP-2026-077", subtitle: "Namanve → Javas Kololo", status: "In transit"),
@@ -67,7 +72,9 @@ public func erpModules() -> [ErpModule] {
             seedRecord(module: "production", entity: "Production Orders", title: "MO-2026-118", subtitle: "House blend 250g", status: "In progress"),
         ]),
         ErpModule(id: "benchmark", label: "Work Systems", group: "Quality", description: "Work systems, benchmarks, KPIs, cycle time, productivity, gaps, and improvements.", icon: "chart.bar", color: 0xFF57534E, entities: ["Work Systems", "Benchmark Studies", "KPI Definitions", "Cycle Time Studies", "Productivity Scores", "Gap Analyses", "Improvement Actions"]),
-        ErpModule(id: "pos", label: "POS", group: "Commercial", description: "Front-of-house restaurant POS: dine-in floor, KOTs, receipts, kitchen display, and shift close.", icon: "creditcard", color: 0xFF059669, entities: ["POS Terminal", "POS Locations", "POS Products", "POS Services", "POS Stock In", "Registers", "Cash Sessions", "Dining Tables", "Open Tickets", "POS Sales", "POS Returns", "Daily Closings"], seed: [
+        ErpModule(id: "pos", label: "POS", group: "Commercial", description: "Front-of-house restaurant POS: dine-in floor, KOTs, receipts, kitchen display, and shift close.", icon: "creditcard", color: 0xFF0F766E, entities: ["POS Terminal", "POS Locations", "POS Products", "POS Services", "POS Stock In", "Registers", "Cash Sessions", "Dining Tables", "Open Tickets", "POS Sales", "POS Returns", "Daily Closings"], seed: [
+            seedRecord(module: "pos", entity: "POS Terminal", title: "Front Till", subtitle: "Main Shop", status: "Active"),
+            seedRecord(module: "pos", entity: "Open Tickets", title: "T-104", subtitle: "Table 6 · dine-in", status: "Open", amount: 86_000),
             seedRecord(module: "pos", entity: "POS Sales", title: "POS-20260824-0012", subtitle: "Front Till · Cash", status: "Paid", amount: 28_500),
         ]),
         ErpModule(id: "payroll", label: "HR & Payroll", group: "People", description: "Employees, attendance, leave, payroll runs, payslips, and statutory remittances.", icon: "person.crop.rectangle", color: 0xFF7C3AED, entities: ["Employees", "Departments", "Sites", "Blocks", "Attendance", "Punch Log", "Attendance Exceptions", "Attendance Summary", "Leave Requests", "Holidays", "Job Positions", "Onboarding", "Create Payroll", "Payroll Runs", "Payslip Items", "Payslips", "Recurring Payslips", "Statutory Remittances"], approvalEntities: ["Leave Requests"], seed: [
@@ -87,10 +94,15 @@ public func erpModules() -> [ErpModule] {
         ErpModule(id: "accounts", label: "Accounts", group: "Accounting", description: "Chart of accounts, journals, matching, provisions, ledgers, and trial balance.", icon: "book", color: 0xFF0F172A, entities: ["Chart of Accounts", "Control Accounts", "Special Accounts", "Journal Entries", "Recurring Journal Entries", "Matching Entries", "Provisions", "Ledgers", "Trial Balance"], seed: [
             seedRecord(module: "accounts", entity: "Journal Entries", title: "JE-2026-240", subtitle: "Roast depreciation", status: "Posted", amount: 2_100_000),
         ]),
-        ErpModule(id: "folders", label: "Folders", group: "Records", description: "Folder structure for documents and attachments.", icon: "folder", color: 0xFFA16207, entities: ["Folders"], seed: [
+        ErpModule(id: "folders", label: "Cabinets & Folders", group: "Records", description: "Cabinets, folders, and file requests for the document store.", icon: "folder", color: 0xFFA16207, entities: ["Cabinets", "Folders", "File Requests"], seed: [
+            seedRecord(module: "folders", entity: "Cabinets", title: "Statutory", subtitle: "Finance packs", status: "Active"),
             seedRecord(module: "folders", entity: "Folders", title: "Finance — 2026", subtitle: "Statutory packs", status: "Active"),
+            seedRecord(module: "folders", entity: "File Requests", title: "FR-2026-009", subtitle: "URA TIN pack", status: "Open"),
         ]),
-        ErpModule(id: "documents", label: "Documents", group: "Records", description: "Attachments, history, and deleted records.", icon: "doc", color: 0xFF57534E, entities: ["Attachments", "History", "Deleted Records"]),
+        ErpModule(id: "documents", label: "DMS Documents", group: "Records", description: "Documents, incoming files, versions, shares, and attachment history.", icon: "doc", color: 0xFF57534E, entities: ["Documents", "Incoming Files", "Versions", "Shares", "Attachments", "History", "Deleted Records"], seed: [
+            seedRecord(module: "documents", entity: "Documents", title: "Lease — Namanve warehouse", subtitle: "Legal · PDF", status: "Active"),
+            seedRecord(module: "documents", entity: "Incoming Files", title: "Supplier COA pack", subtitle: "Kyagalanyi", status: "Open"),
+        ]),
         ErpModule(id: "reports", label: "Reports", group: "Accounting", description: "Balance sheet, P&L, cash flow, aged ledgers, tax, and inventory value.", icon: "chart.bar.doc.horizontal", color: 0xFF0369A1, entities: ["Balance Sheet", "Profit & Loss", "Accounting Operations", "Management Analysis", "Profit & Loss by Class", "Division Exception Report", "Cash Flow", "Cash Flow Indirect", "Trial Balance", "Ledgers", "Statement of Changes in Equity", "Other Comprehensive Income", "Budget vs Actual", "Forecast P&L", "Notes to Financial Statements", "Control Account Reconciliation", "Bank Reconciliation", "Integrity Tests", "Field Audit Log", "Aged Receivables", "Aged Payables", "Customer Statements", "Supplier Statements", "Tax Summary", "Inventory Value Summary"], seed: [
             seedRecord(module: "reports", entity: "Profit & Loss", title: "P&L — August 2026", subtitle: "Net profit UGX 18.4M", status: "Draft"),
         ]),

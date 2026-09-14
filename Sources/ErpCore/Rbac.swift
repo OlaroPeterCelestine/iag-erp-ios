@@ -90,22 +90,43 @@ public struct RoleDefinition: Equatable, Sendable {
     }
 
     public static func fromJSON(_ j: [String: Any]) -> RoleDefinition {
-        var pages: [String: Crud] = [:]
-        if let raw = j["pagePermissions"] as? [String: Any] {
-            for (key, value) in raw {
-                pages[key] = Crud.fromFlags(value as? [String: Any])
-            }
-        }
         let id = (j["id"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return RoleDefinition(
             id: id.isEmpty ? newRoleId() : id,
             name: (j["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
             description: (j["description"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
             crud: Crud.fromFlags(j),
-            system: j["system"] as? Bool ?? false,
-            pagePermissions: pages
+            system: jsonFlagBool(j["system"]),
+            pagePermissions: parsePagePermissions(j["pagePermissions"])
         )
     }
+}
+
+public func jsonFlagBool(_ value: Any?) -> Bool {
+    if let b = value as? Bool { return b }
+    if let n = value as? NSNumber { return n.boolValue }
+    if let s = value as? String {
+        let t = s.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return t == "true" || t == "1" || t == "yes"
+    }
+    return false
+}
+
+public func parsePagePermissions(_ value: Any?) -> [String: Crud] {
+    var raw: [String: Any]?
+    if let obj = value as? [String: Any] {
+        raw = obj
+    } else if let text = value as? String,
+              let data = text.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+        raw = obj
+    }
+    guard let raw else { return [:] }
+    var pages: [String: Crud] = [:]
+    for (key, nested) in raw {
+        pages[key] = Crud.fromFlags(nested as? [String: Any])
+    }
+    return pages
 }
 
 public struct WorkspaceUser: Equatable, Sendable {
@@ -192,6 +213,27 @@ public func mergeStoredRoles(_ stored: [RoleDefinition]) -> [RoleDefinition] {
         !$0.system && !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isAdminRole($0.name) && !isBuiltInRoleName($0.name)
     }
     return systemRoleDefinitions() + custom
+}
+
+/// Keep Postgres roles (including system rows and their page matrix) as the catalog.
+public func adoptApiRoles(_ apiRoles: [RoleDefinition]) -> [RoleDefinition] {
+    let fromApi = apiRoles.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    if fromApi.isEmpty { return systemRoleDefinitions() }
+    var seen = Set<String>()
+    var out: [RoleDefinition] = []
+    for role in fromApi {
+        let key = normalizeRole(role.name)
+        if seen.contains(key) { continue }
+        seen.insert(key)
+        out.append(role)
+    }
+    for local in systemRoleDefinitions() {
+        let key = normalizeRole(local.name)
+        if seen.contains(key) { continue }
+        seen.insert(key)
+        out.append(local)
+    }
+    return out
 }
 
 public struct DemoAccount: Equatable, Sendable {

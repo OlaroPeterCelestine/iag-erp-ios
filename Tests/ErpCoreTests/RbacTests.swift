@@ -2,9 +2,12 @@ import XCTest
 @testable import ErpCore
 
 final class RbacTests: XCTestCase {
+    private let testPassword = "unit-test-login"
+
     private func store() -> ErpStore {
         let s = ErpStore(persistence: MemoryKeyValueStore())
         s.load()
+        s.seedTestPasswords(testPassword)
         return s
     }
 
@@ -68,11 +71,11 @@ final class RbacTests: XCTestCase {
 
     func testLoginEnforcesDepartmentGrantsAndWorkflowSod() {
         let s = store()
-        XCTAssertEqual(s.login("nobody", "iagdemo"), "Unknown user.")
-        XCTAssertEqual(s.login("viewer", "iagdemo", departmentId: "banking"), "Your role cannot open that app.")
+        XCTAssertEqual(s.login("nobody", testPassword), "Unknown user.")
+        XCTAssertEqual(s.login("viewer", testPassword, departmentId: "banking"), "Your role cannot open that app.")
         XCTAssertFalse(s.isSignedIn)
 
-        XCTAssertNil(s.login("viewer", "iagdemo"))
+        XCTAssertNil(s.login("viewer", testPassword))
         XCTAssertEqual(s.user?.role, "Viewer")
         XCTAssertFalse(s.canOpen("banking"))
         XCTAssertTrue(s.canOpen("reports"))
@@ -81,8 +84,8 @@ final class RbacTests: XCTestCase {
         XCTAssertTrue(s.visibleModules.contains { $0.id == "reports" })
         s.logout()
 
-        XCTAssertEqual(s.login("contractor", "iagdemo", departmentId: "banking"), "Your role cannot open that app.")
-        XCTAssertNil(s.login("contractor", "iagdemo"))
+        XCTAssertEqual(s.login("contractor", testPassword, departmentId: "banking"), "Your role cannot open that app.")
+        XCTAssertNil(s.login("contractor", testPassword))
         XCTAssertEqual(s.activeDepartmentId, "projects")
         XCTAssertEqual(s.activeAppId, "projects")
         XCTAssertTrue(s.canOpen("contract-manager"))
@@ -91,7 +94,7 @@ final class RbacTests: XCTestCase {
         XCTAssertEqual(s.activeDepartmentId, "projects")
         s.logout()
 
-        XCTAssertNil(s.login("clerk", "iagdemo"))
+        XCTAssertNil(s.login("clerk", testPassword))
         XCTAssertTrue(s.canCreate("sales", "Sales Invoices"))
         XCTAssertFalse(s.canEdit("sales", "Sales Invoices"))
         XCTAssertFalse(s.canDelete("sales", "Sales Invoices"))
@@ -114,7 +117,7 @@ final class RbacTests: XCTestCase {
         XCTAssertNotNil(s.deleteRecord(draft))
         s.logout()
 
-        XCTAssertNil(s.login("admin", "iagdemo"))
+        XCTAssertNil(s.login("admin", testPassword))
         XCTAssertTrue(s.canOpen("fleet"))
         XCTAssertTrue(s.canDelete("sales", "Sales Invoices"))
         XCTAssertTrue(s.canApprove)
@@ -147,7 +150,7 @@ final class RbacTests: XCTestCase {
         let s = store()
         XCTAssertNotNil(s.saveRole(RoleDefinition(id: "x", name: "Lab Tech")))
 
-        XCTAssertNil(s.login("admin", "iagdemo"))
+        XCTAssertNil(s.login("admin", testPassword))
         XCTAssertNil(s.saveRole(RoleDefinition(
             id: "role-lab-tech",
             name: "Lab Tech",
@@ -158,10 +161,10 @@ final class RbacTests: XCTestCase {
                 "lab": Crud(view: true, create: true, edit: true, delete: false),
             ]
         )))
-        XCTAssertNil(s.saveWorkspaceUser(username: "labtech", name: "Lina Lab", role: "Lab Tech", password: "iagdemo"))
+        XCTAssertNil(s.saveWorkspaceUser(username: "labtech", name: "Lina Lab", role: "Lab Tech", password: testPassword))
         s.logout()
 
-        XCTAssertNil(s.login("labtech", "iagdemo"))
+        XCTAssertNil(s.login("labtech", testPassword))
         XCTAssertEqual(s.user?.role, "Lab Tech")
         XCTAssertTrue(s.canOpen("lab"))
         XCTAssertFalse(s.canOpen("banking"))
@@ -185,13 +188,13 @@ final class RbacTests: XCTestCase {
             }
         }
         let s = store()
-        XCTAssertNil(s.login("admin", "iagdemo"))
+        XCTAssertNil(s.login("admin", testPassword))
         XCTAssertEqual(s.visibleModules.count, modules.count)
         XCTAssertTrue(canAccessSpecialNav("Administrator", "analytics"))
         XCTAssertTrue(s.visibleWorkspaceTools.contains { $0.id == "trace" })
         XCTAssertTrue(s.visibleWorkspaceTools.contains { $0.id == "analytics" })
         s.logout()
-        XCTAssertNil(s.login("viewer", "iagdemo"))
+        XCTAssertNil(s.login("viewer", testPassword))
         XCTAssertTrue(canAccessSpecialNav("Viewer", "guides"))
         XCTAssertFalse(canAccessSpecialNav("Viewer", "analytics"))
         XCTAssertTrue(s.visibleWorkspaceTools.contains { $0.id == "trace" })
@@ -211,7 +214,7 @@ final class RbacTests: XCTestCase {
         XCTAssertTrue(canCreateIn("Viewer", "clock-in"))
 
         let s = store()
-        XCTAssertNil(s.login("clerk", "iagdemo"))
+        XCTAssertNil(s.login("clerk", testPassword))
         XCTAssertTrue(s.canOpen("clock-in"))
         XCTAssertFalse(s.canOpen("payroll"))
         XCTAssertTrue(s.canClockIn)
@@ -233,13 +236,13 @@ final class RbacTests: XCTestCase {
         XCTAssertNil(s.openAttendanceToday())
         s.logout()
 
-        XCTAssertNil(s.login("viewer", "iagdemo"))
+        XCTAssertNil(s.login("viewer", testPassword))
         XCTAssertTrue(s.canOpen("clock-in"))
         XCTAssertTrue(s.visibleModules.contains { $0.id == "clock-in" })
         XCTAssertTrue(s.punch(kind: "in", latitude: hqLatitude, longitude: hqLongitude, accuracy: 8)?.contains("Checked in") == true)
         s.logout()
 
-        XCTAssertNil(s.login("contractor", "iagdemo"))
+        XCTAssertNil(s.login("contractor", testPassword))
         XCTAssertTrue(s.canOpen("clock-in"))
         XCTAssertTrue(s.canOpen("projects"))
         XCTAssertFalse(s.canOpen("payroll"))
@@ -247,16 +250,23 @@ final class RbacTests: XCTestCase {
 
     func testSuiteAppsAreSeparateFullTools() {
         XCTAssertEqual(suiteApps.map(\.id).sorted(), [
-            "finance", "fleet", "hr", "logistics", "procurement", "production",
-            "projects", "quality", "records", "requests", "sales", "security",
+            "contracts", "crm", "dms", "finance", "fleet", "hr", "logistics", "pos",
+            "procurement", "production", "projects", "quality", "requests", "sales", "security",
         ].sorted())
+        XCTAssertTrue(canOpenSuiteApp("Administrator", "crm"))
+        XCTAssertTrue(canOpenSuiteApp("Administrator", "pos"))
+        XCTAssertTrue(canOpenSuiteApp("Administrator", "contracts"))
+        XCTAssertTrue(canOpenSuiteApp("Administrator", "dms"))
+        XCTAssertTrue(canOpenSuiteApp("Administrator", "fleet"))
+        XCTAssertEqual(suiteAppById("records")?.id, "dms")
+        XCTAssertEqual(suiteAppById("contract-manager")?.id, "contracts")
         XCTAssertTrue(canOpenSuiteApp("Procurement", "procurement"))
         XCTAssertFalse(canOpenSuiteApp("Procurement", "security"))
         XCTAssertTrue(canOpenSuiteApp("HR", "hr"))
         XCTAssertFalse(canOpenSuiteApp("Viewer", "security"))
 
         let s = store()
-        XCTAssertNil(s.login("admin", "iagdemo"))
+        XCTAssertNil(s.login("admin", testPassword))
         XCTAssertNil(s.activeAppId)
         XCTAssertEqual(s.visibleSuiteApps.count, suiteApps.count)
         s.openApp("finance")
@@ -270,24 +280,24 @@ final class RbacTests: XCTestCase {
         XCTAssertNil(s.activeAppId)
         s.logout()
 
-        XCTAssertNil(s.login("procurement", "iagdemo"))
+        XCTAssertNil(s.login("procurement", testPassword))
         XCTAssertEqual(s.activeAppId, "procurement")
         XCTAssertTrue(s.appModules.contains { $0.id == "purchases" })
         XCTAssertFalse(s.appModules.contains { $0.id == "banking" })
         s.logout()
 
-        XCTAssertNil(s.login("hr", "iagdemo"))
+        XCTAssertNil(s.login("hr", testPassword))
         XCTAssertEqual(s.activeAppId, "hr")
         s.logout()
 
-        XCTAssertEqual(s.login("clerk", "iagdemo", departmentId: "security"), "Your role cannot open that app.")
-        XCTAssertNil(s.login("clerk", "iagdemo"))
+        XCTAssertEqual(s.login("clerk", testPassword, departmentId: "security"), "Your role cannot open that app.")
+        XCTAssertNil(s.login("clerk", testPassword))
         XCTAssertEqual(s.activeAppId, "finance")
     }
 
     func testQuickActionsFollowAppAndRbac() {
         let s = store()
-        XCTAssertNil(s.login("admin", "iagdemo"))
+        XCTAssertNil(s.login("admin", testPassword))
         XCTAssertTrue(s.launcherQuickActions.contains { $0.id == "clock" })
         XCTAssertTrue(s.launcherQuickActions.contains { $0.id == "approvals" })
         s.openApp("finance")
@@ -300,9 +310,20 @@ final class RbacTests: XCTestCase {
         s.openApp("sales")
         XCTAssertTrue(s.homeQuickActions.contains { $0.id == "invoice" })
         XCTAssertTrue(s.homeQuickActions.contains { $0.id == "customer" })
+        XCTAssertFalse(s.homeQuickActions.contains { $0.id == "lead" })
+        s.openApp("crm")
+        XCTAssertTrue(s.homeQuickActions.contains { $0.id == "lead" })
+        s.openApp("pos")
+        XCTAssertTrue(s.homeQuickActions.contains { $0.id == "ticket" })
+        s.openApp("contracts")
+        XCTAssertTrue(s.homeQuickActions.contains { $0.id == "contract" })
+        s.openApp("fleet")
+        XCTAssertTrue(s.homeQuickActions.contains { $0.id == "vehicle" })
+        s.openApp("dms")
+        XCTAssertTrue(s.homeQuickActions.contains { $0.id == "folder" })
         s.logout()
 
-        XCTAssertNil(s.login("viewer", "iagdemo"))
+        XCTAssertNil(s.login("viewer", testPassword))
         XCTAssertEqual(s.activeAppId, "finance")
         XCTAssertTrue(s.homeQuickActions.contains { $0.id == "clock" })
         XCTAssertTrue(s.homeQuickActions.contains { $0.id == "reports" })
@@ -310,14 +331,14 @@ final class RbacTests: XCTestCase {
         XCTAssertFalse(s.homeQuickActions.contains { $0.id == "approvals" })
         s.logout()
 
-        XCTAssertNil(s.login("procurement", "iagdemo"))
+        XCTAssertNil(s.login("procurement", testPassword))
         XCTAssertTrue(s.homeQuickActions.contains { $0.id == "po" })
         XCTAssertFalse(s.homeQuickActions.contains { $0.id == "invoice" })
     }
 
     func testWelcomeStatsShowLiveCounts() {
         let s = store()
-        XCTAssertNil(s.login("admin", "iagdemo"))
+        XCTAssertNil(s.login("admin", testPassword))
         XCTAssertNil(s.activeAppId)
         XCTAssertEqual(s.welcomeStats.map(\.id), ["apps", "records", "todo", "clock"])
         XCTAssertEqual(s.welcomeStats.first { $0.id == "apps" }?.value, "\(s.visibleSuiteApps.count)")
@@ -327,9 +348,54 @@ final class RbacTests: XCTestCase {
         XCTAssertEqual(s.welcomeStats.first { $0.id == "desks" }?.value, "\(s.appModules.count)")
         s.logout()
 
-        XCTAssertNil(s.login("viewer", "iagdemo"))
+        XCTAssertNil(s.login("viewer", testPassword))
         XCTAssertFalse(s.welcomeStats.contains { $0.id == "todo" })
         XCTAssertTrue(s.welcomeStats.contains { $0.id == "desks" })
         XCTAssertTrue(s.welcomeStats.contains { $0.id == "clock" })
+    }
+
+    func testPasswordsAreHashedAndHaveNoSharedDefault() {
+        let persistence = MemoryKeyValueStore()
+        let s = ErpStore(persistence: persistence)
+        s.load()
+        XCTAssertEqual(s.login("admin", "anything-at-all"), "No password set. Use Forgot password to create one.")
+        XCTAssertNil(s.resetPassword(username: "admin", newPassword: testPassword, confirm: testPassword))
+        XCTAssertNil(s.login("admin", testPassword))
+        let raw = persistence.get(storeKey) ?? ""
+        XCTAssertFalse(raw.contains(testPassword))
+        XCTAssertTrue(raw.contains(passwordDigest("admin", testPassword)))
+    }
+
+    func testLegacyPlaintextPasswordsAreMigratedOnLoad() {
+        let persistence = MemoryKeyValueStore()
+        let legacy = "legacy-secret"
+        persistence.put(storeKey, "{\"passwords\":{\"admin\":\"\(legacy)\"}}")
+        let s = ErpStore(persistence: persistence)
+        s.load()
+        XCTAssertNil(s.login("admin", legacy))
+        let raw = persistence.get(storeKey) ?? ""
+        XCTAssertFalse(raw.contains(legacy))
+        XCTAssertTrue(raw.contains(passwordDigest("admin", legacy)))
+    }
+
+    func testAdoptApiRolesKeepsDatabaseSystemRoles() {
+        let api = [
+            RoleDefinition(id: "role-admin-db", name: "Administrator", crud: .full, system: true),
+            RoleDefinition(
+                id: "r1",
+                name: "Field Clerk",
+                crud: Crud(view: true, create: true, edit: false, delete: false),
+                system: false,
+                pagePermissions: ["sales": Crud(view: true, create: true, edit: false, delete: false)]
+            ),
+        ]
+        let adopted = adoptApiRoles(api)
+        XCTAssertEqual(findRoleDefinition(adopted, "Administrator")?.id, "role-admin-db")
+        XCTAssertTrue(findRoleDefinition(adopted, "Field Clerk")?.crud.create == true)
+        XCTAssertEqual(findRoleDefinition(adopted, "Field Clerk")?.pagePermissions["sales"]?.view, true)
+        XCTAssertNotNil(findRoleDefinition(adopted, "Clerk"))
+        let merged = mergeStoredRoles(api)
+        XCTAssertNotEqual(findRoleDefinition(merged, "Administrator")?.id, "role-admin-db")
+        XCTAssertEqual(findRoleDefinition(merged, "Field Clerk")?.id, "r1")
     }
 }

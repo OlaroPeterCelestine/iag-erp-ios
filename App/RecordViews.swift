@@ -98,6 +98,9 @@ struct EntityListView: View {
             .iagCanvas()
             .navigationTitle(entity)
             .searchable(text: $query, prompt: "Filter records")
+            .task(id: "\(moduleId)|\(entity)") {
+                await box.store.refreshEntity(moduleId, entity)
+            }
             .toolbar {
                 if store.canCreate(moduleId, entity) && entity != "My punches" && entity != "Punch Log" {
                     NavigationLink { RecordFormView(moduleId: moduleId, entity: entity) } label: { Image(systemName: "plus") }
@@ -130,21 +133,52 @@ struct RecordDetailView: View {
                 }
                 if let message { Text(message).foregroundStyle(.red) }
                 if record.status.lowercased() == "draft" {
-                    Button("Submit") { message = store.submitRecord(record) ?? "Submitted." }
+                    Button("Submit") {
+                        Task {
+                            let result = box.store.remoteSession
+                                ? await box.store.submitRecordAsync(record)
+                                : box.store.submitRecord(record)
+                            await MainActor.run { message = result ?? "Submitted." }
+                        }
+                    }
                 }
                 if store.canApproveModule(record.moduleId) && store.isOpenStatus(record.status) {
-                    Button("Approve") { message = store.approveRecord(record) ?? "Approved." }
-                    Button("Reject", role: .destructive) { message = store.rejectRecord(record) ?? "Rejected." }
+                    Button("Approve") {
+                        Task {
+                            let result = box.store.remoteSession
+                                ? await box.store.approveRecordAsync(record)
+                                : box.store.approveRecord(record)
+                            await MainActor.run { message = result ?? "Approved." }
+                        }
+                    }
+                    Button("Reject", role: .destructive) {
+                        Task {
+                            let result = box.store.remoteSession
+                                ? await box.store.rejectRecordAsync(record)
+                                : box.store.rejectRecord(record)
+                            await MainActor.run { message = result ?? "Rejected." }
+                        }
+                    }
                 }
                 if store.canVoid(record.moduleId) {
-                    Button("Void", role: .destructive) { message = store.voidRecord(record) ?? "Voided." }
+                    Button("Void", role: .destructive) {
+                        Task {
+                            let result = box.store.remoteSession
+                                ? await box.store.voidRecordAsync(record)
+                                : box.store.voidRecord(record)
+                            await MainActor.run { message = result ?? "Voided." }
+                        }
+                    }
                 }
                 if store.canDelete(record.moduleId, record.entity) {
                     Button("Delete", role: .destructive) {
-                        if let err = store.deleteRecord(record) {
-                            message = err
-                        } else {
-                            dismiss()
+                        Task {
+                            let err = box.store.remoteSession
+                                ? await box.store.deleteRecordAsync(record)
+                                : box.store.deleteRecord(record)
+                            await MainActor.run {
+                                if let err { message = err } else { dismiss() }
+                            }
                         }
                     }
                 }
