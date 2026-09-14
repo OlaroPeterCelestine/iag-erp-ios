@@ -7,6 +7,7 @@ app_files = [
     "App/ErpIOSApp.swift",
     "App/LoginView.swift",
     "App/ShellViews.swift",
+    "App/ClockInView.swift",
     "App/RecordViews.swift",
     "App/AccessViews.swift",
 ]
@@ -20,6 +21,7 @@ files = {
     "ErpIOSApp.swift": uid("file-ErpIOSApp"),
     "LoginView.swift": uid("file-LoginView"),
     "ShellViews.swift": uid("file-ShellViews"),
+    "ClockInView.swift": uid("file-ClockInView"),
     "RecordViews.swift": uid("file-RecordViews"),
     "AccessViews.swift": uid("file-AccessViews"),
     "Assets": uid("file-Assets"),
@@ -248,6 +250,7 @@ pbx = f"""// !$*UTF8*$!
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "ERP iOS";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ERP uses your location to verify you are on an IAG site or block when you clock in.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -275,6 +278,7 @@ pbx = f"""// !$*UTF8*$!
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "ERP iOS";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ERP uses your location to verify you are on an IAG site or block when you clock in.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
