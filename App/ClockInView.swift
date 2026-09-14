@@ -76,24 +76,29 @@ struct ClockInView: View {
         }()
         List {
             Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(store.user?.name ?? "Staff")
-                        .font(.title2.weight(.semibold))
-                    Text(store.user?.role ?? "")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(open == nil ? "Clocked out" : "Clocked in")
+                                .font(.title2.weight(.semibold))
+                            Text(store.user?.name ?? "Staff")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        StatusPill(text: open == nil ? "Out" : "In")
+                    }
                     if let open {
-                        Text("Checked in at \(recordField(open, "clockIn", "Clock in")) · \(open.subtitle)")
+                        Text("Since \(recordField(open, "clockIn", "Clock in")) · \(open.subtitle)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {
-                        Text("No open check-in today.")
+                        Text("Capture GPS, then clock in at a site.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.vertical, 6)
-                .listRowBackground(Color.clear)
+                .padding(.vertical, 4)
             }
 
             Section("Location") {
@@ -162,5 +167,10 @@ struct ClockInView: View {
         .iagCanvas()
         .navigationTitle("Clock In")
         .onAppear { gps.refresh() }
+        .task {
+            await box.store.refreshEntity("payroll", "Sites")
+            await box.store.refreshEntity("payroll", "Blocks")
+            await box.store.refreshEntity("payroll", "Attendance")
+        }
     }
 }

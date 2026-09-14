@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Core (RBAC tests)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tests
+        run: swift test
+
+  ios:
+    name: iOS (build)
+    runs-on: macos-15
+    needs: core
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          xcodebuild \
+            -project ErpIOS.xcodeproj \
+            -scheme "ERP iOS" \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build
