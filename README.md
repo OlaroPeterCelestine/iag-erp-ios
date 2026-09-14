@@ -39,7 +39,7 @@ Anyone who already has a Finance role: admin, accountant, clerk, viewer, HR, HOD
 
 Built-in demo roles cannot be overwritten. Custom roles get CRUD from the matrix you set. Approve, void, payroll, and geofence still follow the same allow-lists as web ERP. Specialty apps (lab, R&D, POS, fleet, …) need an explicit grant.
 
-Usernames include `admin`, `accountant`, `clerk`, `viewer`, `hr`, `hod`, `pm`, `contractor`, `gm`, `ceo`, `qs`, `stores`, `procurement`. There is no shared demo password — use **Forgot password** on first launch.
+Usernames include `admin`, `accountant`, `clerk`, `viewer`, `hr`, `hod`, `pm`, `contractor`, `gm`, `ceo`, `qs`, `stores`, `procurement`. Sign in with the **same password as the live web ERP**. The old short demo password is rejected. To try the app offline, use **Forgot password**, then **Continue on this device**.
 
 ```
 Sources/ErpCore/   # RBAC, catalog, store

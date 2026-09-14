@@ -696,5 +696,5 @@ let erpQnA: [(q: String, a: String)] = [
     ("Where is Banking?", "Home or Departments → Treasury → Banking. Features include bank accounts, transfers, statements, and reconciliations."),
     ("Who can clock in?", "Every signed-in login, including clerk, viewer, and contractor. You do not need the HR desk."),
     ("Who can approve?", "QS, Stores, Procurement, HR, HOD, PM, Accounts, GM, CEO, Finance, and Administrators. Clerk and Viewer cannot."),
-    ("How do I sign in?", "Use Forgot password on the sign-in screen to create a password for a demo username such as admin."),
+    ("How do I sign in?", "Use the same username and password as the web ERP. The old short demo login no longer works. To try the app offline, tap Forgot password, save a password, then Continue on this device."),
 ]
