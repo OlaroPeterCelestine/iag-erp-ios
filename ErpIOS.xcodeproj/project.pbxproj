@@ -1,0 +1,277 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A73A493417A26149E2E116AE /* ErpIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC256553FCCF48F353EE1F8 /* ErpIOSApp.swift */; };
+		1CB61EFA8150446E28595406 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF5858A0E0E2201B92DA6CCC /* LoginView.swift */; };
+		8B4334446378D9AC4B14D5E4 /* ShellViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E2ADCDC13D7DD79363738B /* ShellViews.swift */; };
+		5C621F36A0216493F8BF9CD7 /* RecordViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80D09DE96D5972A468BA6F9D /* RecordViews.swift */; };
+		9529B5B37184624524358A00 /* AccessViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBA6FA9546C6E82C9C58545 /* AccessViews.swift */; };
+		2A8EB5D3376C791DADAC7B16 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9C0AAAAA1245D07FC1AF5570 /* Assets.xcassets */; };
+		A594D57D3AB4EE865BA4177C /* ErpCore in Frameworks */ = {isa = PBXBuildFile; productRef = A31D122B87DD29E797CB4427 /* ErpCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		3CC256553FCCF48F353EE1F8 /* ErpIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErpIOSApp.swift; sourceTree = "<group>"; };
+		AF5858A0E0E2201B92DA6CCC /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		21E2ADCDC13D7DD79363738B /* ShellViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellViews.swift; sourceTree = "<group>"; };
+		80D09DE96D5972A468BA6F9D /* RecordViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordViews.swift; sourceTree = "<group>"; };
+		8EBA6FA9546C6E82C9C58545 /* AccessViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessViews.swift; sourceTree = "<group>"; };
+		9C0AAAAA1245D07FC1AF5570 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D957E19B16B69713B7749A90 /* ERP iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ERP iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		68ED96E173B8E85EFF925036 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A594D57D3AB4EE865BA4177C /* ErpCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		EAE9011C23DCA5E5F486AF2D /* App */ = {
+			isa = PBXGroup;
+			children = (
+				3CC256553FCCF48F353EE1F8 /* ErpIOSApp.swift */,
+				AF5858A0E0E2201B92DA6CCC /* LoginView.swift */,
+				21E2ADCDC13D7DD79363738B /* ShellViews.swift */,
+				80D09DE96D5972A468BA6F9D /* RecordViews.swift */,
+				8EBA6FA9546C6E82C9C58545 /* AccessViews.swift */,
+				9C0AAAAA1245D07FC1AF5570 /* Assets.xcassets */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A511EC6FC8BCAFC6B21CD81D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D957E19B16B69713B7749A90 /* ERP iOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		22EA56DD29576E62BCCCA1AA = {
+			isa = PBXGroup;
+			children = (
+				EAE9011C23DCA5E5F486AF2D /* App */,
+				A511EC6FC8BCAFC6B21CD81D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		874E7FD7A39CF1D6319F589D /* ERP iOS */ = {
+			isa = PBXNativeTarget;
+			name = "ERP iOS";
+			buildConfigurationList = E8949D512A1ED272DC698682 /* Build configuration list for PBXNativeTarget "ERP iOS" */;
+			buildPhases = (
+				2A976C55E781D531D45C10A3 /* Sources */,
+				68ED96E173B8E85EFF925036 /* Frameworks */,
+				D358F9953273580C5B97B1E2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "ERP iOS";
+			packageProductDependencies = (
+				A31D122B87DD29E797CB4427 /* ErpCore */,
+			);
+			productName = "ERP iOS";
+			productReference = D957E19B16B69713B7749A90 /* ERP iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		98F54143AB4E86B28C3AFEE0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = C74034AE7265F595782FCC65 /* Build configuration list for PBXProject "ErpIOS" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 22EA56DD29576E62BCCCA1AA;
+			packageReferences = (
+				1F7F6697A3A819DDF26C9E55 /* XCLocalSwiftPackageReference */,
+			);
+			productRefGroup = A511EC6FC8BCAFC6B21CD81D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				874E7FD7A39CF1D6319F589D /* ERP iOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D358F9953273580C5B97B1E2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2A8EB5D3376C791DADAC7B16 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2A976C55E781D531D45C10A3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A73A493417A26149E2E116AE /* ErpIOSApp.swift in Sources */,
+				1CB61EFA8150446E28595406 /* LoginView.swift in Sources */,
+				8B4334446378D9AC4B14D5E4 /* ShellViews.swift in Sources */,
+				5C621F36A0216493F8BF9CD7 /* RecordViews.swift in Sources */,
+				9529B5B37184624524358A00 /* AccessViews.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		B0B56C12A90899E4707AE233 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C2FD164E71C295B24A6638ED /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		C9A1B2E190A1E670EB1D4ACA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "ERP iOS";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = africa.iag.erp.ios;
+				PRODUCT_NAME = "ERP iOS";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		41E70647AD8CF222172708CF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "ERP iOS";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = africa.iag.erp.ios;
+				PRODUCT_NAME = "ERP iOS";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C74034AE7265F595782FCC65 /* Build configuration list for PBXProject "ErpIOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B0B56C12A90899E4707AE233 /* Debug */,
+				C2FD164E71C295B24A6638ED /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E8949D512A1ED272DC698682 /* Build configuration list for PBXNativeTarget "ERP iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C9A1B2E190A1E670EB1D4ACA /* Debug */,
+				41E70647AD8CF222172708CF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		1F7F6697A3A819DDF26C9E55 /* XCLocalSwiftPackageReference */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A31D122B87DD29E797CB4427 /* ErpCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ErpCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+}
