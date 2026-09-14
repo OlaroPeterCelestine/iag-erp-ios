@@ -297,7 +297,7 @@ public let workspaceTools: [WorkspaceTool] = [
     WorkspaceTool(id: "accounting-documents", label: "Accounting documents", group: "Records", description: "Sales, purchase, payroll, and payment documents in one pack."),
     WorkspaceTool(id: "templates", label: "Templates", group: "Records", description: "Reusable request and document templates."),
     WorkspaceTool(id: "payment-requests", label: "Approval desks", group: "Requests", description: "Open requests waiting on a desk, plus your own returned items."),
-    WorkspaceTool(id: "comms", label: "Comms", group: "People", description: "Email and SMS sent from the ERP."),
+    WorkspaceTool(id: "clock-in", label: "Clock In", group: "People", description: "GPS clock-in and clock-out against Sites and Blocks."),
     WorkspaceTool(id: "guides", label: "Guides", group: "Help", description: "How desks, approvals, and segregation of duties work."),
     WorkspaceTool(id: "qna", label: "Q&A", group: "Help", description: "Common questions from operators."),
     WorkspaceTool(id: "release-notes", label: "Release notes", group: "Help", description: "What shipped in this app."),
