@@ -7,10 +7,10 @@ private enum LoginField: Hashable {
 
 private enum LoginPalette {
     static let canvas = Color.white
-    static let ink = Color(red: 24 / 255, green: 24 / 255, blue: 27 / 255)
+    static let ink = Color(red: 17 / 255, green: 17 / 255, blue: 19 / 255)
     static let muted = Color(red: 113 / 255, green: 113 / 255, blue: 122 / 255)
-    static let field = Color(red: 244 / 255, green: 244 / 255, blue: 245 / 255)
-    static let line = Color(red: 228 / 255, green: 228 / 255, blue: 231 / 255)
+    static let field = Color(red: 248 / 255, green: 248 / 255, blue: 249 / 255)
+    static let line = Color(red: 232 / 255, green: 232 / 255, blue: 235 / 255)
 }
 
 struct LoginView: View {
@@ -28,23 +28,25 @@ struct LoginView: View {
             GeometryReader { geo in
             ScrollView {
                 VStack(spacing: 0) {
-                    IagBrandLogo(height: 56, mono: true)
-                        .padding(.top, 24)
+                    IagBrandLogo(height: 48, mono: true)
+                        .padding(.top, 20)
                     Text(appName)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(LoginPalette.ink)
-                        .padding(.top, 16)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(LoginPalette.muted)
+                        .tracking(0.8)
+                        .textCase(.uppercase)
+                        .padding(.top, 18)
                     Text("Sign in")
-                        .font(.system(size: 28, weight: .semibold))
+                        .font(.system(size: 32, weight: .semibold))
                         .foregroundStyle(LoginPalette.ink)
-                        .padding(.top, 28)
-                    Text("Enter your username and password to continue.")
+                        .padding(.top, 12)
+                    Text("Use your IAG workspace credentials.")
                         .font(.subheadline)
                         .foregroundStyle(LoginPalette.muted)
                         .multilineTextAlignment(.center)
-                        .padding(.top, 6)
+                        .padding(.top, 8)
                     form
-                        .padding(.top, 28)
+                        .padding(.top, 32)
                     Text("© Inspire Africa Group")
                         .font(.caption)
                         .foregroundStyle(LoginPalette.muted)
@@ -103,10 +105,10 @@ struct LoginView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            .background(LoginPalette.ink, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(LoginPalette.ink, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .disabled(busy)
             .opacity(busy ? 0.72 : 1)
-            .padding(.top, 4)
+            .padding(.top, 8)
             Text("On this phone, Sign in with admin / ChangeMe. Live IAG needs your web ERP password.")
                 .font(.caption)
                 .foregroundStyle(LoginPalette.muted)

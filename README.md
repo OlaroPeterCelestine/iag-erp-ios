@@ -4,7 +4,7 @@ Native SwiftUI Finance ERP for iPhone and iPad: every department desk, records, 
 
 **Version:** `1.0.0` — [changelog](./CHANGELOG.md)
 
-**Bundle ID:** `africa.iag.erp.ios`
+**Bundle ID:** `africa.iag.central.ios`
 
 ## Links
 

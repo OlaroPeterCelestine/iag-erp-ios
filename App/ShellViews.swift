@@ -54,7 +54,7 @@ struct HomeView: View {
         let todos = Array(store.appPendingApprovals.prefix(3))
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 32) {
                     if !searching {
                         WelcomeCard(
                             name: first,
@@ -213,7 +213,7 @@ struct DepartmentsView: View {
                                         title: module.label,
                                         subtitle: featureSummary(module),
                                         systemName: module.icon,
-                                        color: iagColor(module.color)
+                                        color: IagTheme.ink
                                     )
                                 }
                                 .simultaneousGesture(TapGesture().onEnded {
@@ -375,7 +375,7 @@ struct AppsLauncherView: View {
         let hits = store.searchHits(query)
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 32) {
                     if !searching {
                         WelcomeCard(
                             name: first,

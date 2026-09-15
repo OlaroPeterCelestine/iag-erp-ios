@@ -63,24 +63,35 @@ struct RootView: View {
 }
 
 struct SplashView: View {
+    @State private var appear = false
+
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
-            IagBrandLogo(height: 132, mono: false)
-                .padding(.horizontal, 40)
+            Color(red: 10 / 255, green: 10 / 255, blue: 12 / 255).ignoresSafeArea()
+            IagBrandLogo(height: 96, mono: false)
+                .padding(.horizontal, 56)
+                .opacity(appear ? 1 : 0)
+                .scaleEffect(appear ? 1 : 0.96)
         }
         .preferredColorScheme(.dark)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.55)) { appear = true }
+        }
     }
 }
 
 enum IagTheme {
-    static let orange = Color(red: 249 / 255, green: 115 / 255, blue: 22 / 255)
-    static let orangeDeep = Color(red: 234 / 255, green: 88 / 255, blue: 12 / 255)
-    static let success = Color(red: 5 / 255, green: 150 / 255, blue: 105 / 255)
+    /// Brand accent — used sparingly (tint, hot todo, primary CTA).
+    static let orange = Color(red: 232 / 255, green: 104 / 255, blue: 32 / 255)
+    static let orangeDeep = Color(red: 194 / 255, green: 78 / 255, blue: 16 / 255)
+    static let ink = Color(red: 17 / 255, green: 17 / 255, blue: 19 / 255)
+    static let success = Color(red: 22 / 255, green: 128 / 255, blue: 92 / 255)
     static let canvas = Color(.systemGroupedBackground)
     static let card = Color(.secondarySystemGroupedBackground)
+    static let hairline = Color.primary.opacity(0.08)
     static let muted = Color.secondary
-    static let radius: CGFloat = 22
+    static let radius: CGFloat = 16
+    static let radiusSm: CGFloat = 12
 }
 
 func iagGreeting() -> String {
@@ -130,10 +141,11 @@ struct IagMark: View {
     var size: CGFloat = 56
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                .fill(IagTheme.orange)
+            RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
+                .fill(IagTheme.ink)
             Text("IAG")
-                .font(.system(size: size * 0.28, weight: .bold, design: .rounded))
+                .font(.system(size: size * 0.26, weight: .semibold, design: .default))
+                .tracking(0.6)
                 .foregroundStyle(.white)
         }
         .frame(width: size, height: size)
@@ -142,16 +154,16 @@ struct IagMark: View {
 
 struct IagIconWell: View {
     var systemName: String
-    var color: Color = IagTheme.orange
+    var color: Color = IagTheme.ink
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(color.opacity(0.12))
+            RoundedRectangle(cornerRadius: IagTheme.radiusSm, style: .continuous)
+                .fill(Color.primary.opacity(0.05))
             Image(systemName: systemName)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(color)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(color.opacity(0.9))
         }
-        .frame(width: 40, height: 40)
+        .frame(width: 38, height: 38)
     }
 }
 
@@ -159,11 +171,11 @@ struct StatusPill: View {
     var text: String
     var body: some View {
         Text(text)
-            .font(.caption2.weight(.semibold))
+            .font(.caption2.weight(.medium))
             .padding(.horizontal, 8)
-            .padding(.vertical, 3)
+            .padding(.vertical, 4)
             .foregroundStyle(statusColor(text))
-            .background(statusColor(text).opacity(0.12), in: Capsule())
+            .background(statusColor(text).opacity(0.1), in: Capsule())
     }
 }
 
@@ -171,15 +183,20 @@ struct DeskRow: View {
     var title: String
     var subtitle: String
     var systemName: String = "square.grid.2x2"
-    var color: Color = IagTheme.orange
+    var color: Color = IagTheme.ink
     var status: String? = nil
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             IagIconWell(systemName: systemName, color: color)
             VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.body.weight(.semibold))
-                Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                Text(title)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.primary)
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
             Spacer(minLength: 8)
             if let status { StatusPill(text: status) }
@@ -196,11 +213,14 @@ struct IagSectionHeader: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.title3.weight(.bold))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.6)
             Spacer()
             if let accessory {
                 Text(accessory)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(IagTheme.orange)
             }
         }
@@ -214,7 +234,7 @@ struct IagEmptyHint: View {
             .font(.subheadline)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
+            .padding(18)
     }
 }
 
@@ -223,12 +243,19 @@ struct IagGrouped<Content: View>: View {
     var body: some View {
         VStack(spacing: 0) { content }
             .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
+                    .stroke(IagTheme.hairline, lineWidth: 1)
+            )
     }
 }
 
 struct IagRowDivider: View {
     var body: some View {
-        Divider().padding(.leading, 68)
+        Rectangle()
+            .fill(IagTheme.hairline)
+            .frame(height: 1)
+            .padding(.leading, 66)
     }
 }
 
@@ -238,22 +265,20 @@ struct AppTile: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [iagColor(app.color), iagColor(app.color).opacity(0.72)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(height: 68)
+            RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
+                .fill(IagTheme.card)
+                .frame(height: 64)
                 .overlay {
                     Image(systemName: app.icon)
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(IagTheme.ink)
                 }
+                .overlay(
+                    RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
+                        .stroke(IagTheme.hairline, lineWidth: 1)
+                )
             Text(app.label)
-                .font(.caption.weight(.semibold))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             if let subtitle {
@@ -272,24 +297,27 @@ struct QuickActionButton: View {
     var badge: Int = 0
 
     var body: some View {
-        let tint = iagColor(action.color)
         VStack(spacing: 8) {
             ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(tint.opacity(0.14))
-                    .frame(width: 58, height: 58)
+                RoundedRectangle(cornerRadius: IagTheme.radiusSm, style: .continuous)
+                    .fill(IagTheme.card)
+                    .frame(width: 54, height: 54)
                     .overlay {
                         Image(systemName: action.icon)
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(tint)
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(IagTheme.ink)
                     }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: IagTheme.radiusSm, style: .continuous)
+                            .stroke(IagTheme.hairline, lineWidth: 1)
+                    )
                 if badge > 0 {
                     Text(badge > 9 ? "9+" : "\(badge)")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(Color.red, in: Capsule())
+                        .background(IagTheme.orange, in: Capsule())
                         .offset(x: 6, y: -4)
                 }
             }
@@ -308,50 +336,58 @@ struct TodayActionCard: View {
     var badge: Int = 0
 
     var body: some View {
-        let tint = iagColor(action.color)
         VStack(spacing: 10) {
             ZStack(alignment: .topTrailing) {
                 Image(systemName: action.icon)
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(tint)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(IagTheme.ink)
                 if badge > 0 {
                     Text(badge > 9 ? "9+" : "\(badge)")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(Color.red, in: Capsule())
+                        .padding(.vertical, 2)
+                        .background(IagTheme.orange, in: Capsule())
                         .offset(x: 14, y: -10)
                 }
             }
             Text(action.label)
-                .font(.caption.weight(.semibold))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(.vertical, 18)
+        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
+                .stroke(IagTheme.hairline, lineWidth: 1)
+        )
     }
 }
 
 struct KpiChip: View {
     let kpi: Kpi
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(kpi.label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(kpi.value)
-                .font(.subheadline.weight(.semibold))
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.primary)
             Text(kpi.hint)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tertiary)
                 .lineLimit(1)
         }
-        .padding(14)
-        .frame(minWidth: 136, alignment: .leading)
+        .padding(16)
+        .frame(minWidth: 140, alignment: .leading)
         .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
+                .stroke(IagTheme.hairline, lineWidth: 1)
+        )
     }
 }
 
@@ -361,13 +397,15 @@ struct WelcomeCard: View {
     var stats: [WelcomeStat]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(iagGreeting())
-                    .font(.subheadline.weight(.medium))
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(iagGreeting().uppercased())
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .tracking(1.1)
                 Text(name)
-                    .font(.largeTitle.weight(.bold))
+                    .font(.system(size: 34, weight: .semibold, design: .default))
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Text(subtitle)
@@ -376,25 +414,33 @@ struct WelcomeCard: View {
                     .lineLimit(2)
             }
             if !stats.isEmpty {
-                HStack(spacing: 10) {
-                    ForEach(stats) { stat in
+                HStack(spacing: 0) {
+                    ForEach(Array(stats.enumerated()), id: \.element.id) { index, stat in
                         let hot = stat.id == "todo" && stat.value != "0"
-                        VStack(spacing: 4) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text(stat.value)
-                                .font(.title2.weight(.bold))
+                                .font(.title2.weight(.semibold))
                                 .foregroundStyle(hot ? IagTheme.orange : .primary)
                             Text(stat.label)
-                                .font(.caption2.weight(.medium))
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            hot ? IagTheme.orange.opacity(0.12) : IagTheme.card,
-                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        if index < stats.count - 1 {
+                            Rectangle()
+                                .fill(IagTheme.hairline)
+                                .frame(width: 1, height: 36)
+                                .padding(.horizontal, 8)
+                        }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
+                        .stroke(IagTheme.hairline, lineWidth: 1)
+                )
             }
         }
     }
