@@ -25,6 +25,7 @@ files = {
     "RecordViews.swift": uid("file-RecordViews"),
     "AccessViews.swift": uid("file-AccessViews"),
     "Assets": uid("file-Assets"),
+    "Info.plist": uid("file-InfoPlist"),
 }
 
 builds = {k: uid(f"build-{k}") for k in files}
@@ -60,6 +61,11 @@ for name, fid in files.items():
             f"\t\t{builds[name]} /* Assets.xcassets in Resources */ = {{isa = PBXBuildFile; fileRef = {fid} /* Assets.xcassets */; }};"
         )
         children.append(f"\t\t\t\t{fid} /* Assets.xcassets */,")
+    elif name == "Info.plist":
+        file_refs.append(
+            f'\t\t{fid} /* Info.plist */ = {{isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; }};'
+        )
+        children.append(f"\t\t\t\t{fid} /* Info.plist */,")
     else:
         file_refs.append(
             f'\t\t{fid} /* {name} */ = {{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {name}; sourceTree = "<group>"; }};'
@@ -70,7 +76,9 @@ for name, fid in files.items():
         children.append(f"\t\t\t\t{fid} /* {name} */,")
 
 source_phase_files = "\n".join(
-    f"\t\t\t\t{builds[n]} /* {n} in Sources */," for n in files if n != "Assets"
+    f"\t\t\t\t{builds[n]} /* {n} in Sources */,"
+    for n in files
+    if n not in ("Assets", "Info.plist")
 )
 resource_phase_files = f"\t\t\t\t{builds['Assets']} /* Assets.xcassets in Resources */,"
 
@@ -244,7 +252,7 @@ pbx = f"""// !$*UTF8*$!
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = FV7CARWTSK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
@@ -257,7 +265,7 @@ pbx = f"""// !$*UTF8*$!
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = africa.iag.erp.ios;
+				PRODUCT_BUNDLE_IDENTIFIER = africa.iag.central.ios;
 				PRODUCT_NAME = "ERP iOS";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -273,7 +281,7 @@ pbx = f"""// !$*UTF8*$!
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = FV7CARWTSK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
@@ -286,7 +294,7 @@ pbx = f"""// !$*UTF8*$!
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = africa.iag.erp.ios;
+				PRODUCT_BUNDLE_IDENTIFIER = africa.iag.central.ios;
 				PRODUCT_NAME = "ERP iOS";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

@@ -29,7 +29,7 @@ struct DepartmentView: View {
                                 title: entity,
                                 subtitle: "\(store.count(moduleId: moduleId, entity: entity)) records",
                                 systemName: "square.grid.2x2",
-                                color: iagColor(module.color)
+                                color: IagTheme.ink
                             )
                         }
                     }
