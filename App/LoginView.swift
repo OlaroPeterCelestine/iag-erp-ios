@@ -47,10 +47,6 @@ struct LoginView: View {
                         .padding(.top, 8)
                     form
                         .padding(.top, 32)
-                    Text("© Inspire Africa Group")
-                        .font(.caption)
-                        .foregroundStyle(LoginPalette.muted)
-                        .padding(.top, 32)
                         .padding(.bottom, 24)
                 }
                 .frame(maxWidth: 400)
@@ -109,29 +105,53 @@ struct LoginView: View {
             .disabled(busy)
             .opacity(busy ? 0.72 : 1)
             .padding(.top, 8)
-            Text("On this phone, sign in with admin / ChangeMe. Live IAG needs your web ERP password.")
-                .font(.caption)
-                .foregroundStyle(LoginPalette.muted)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 4)
             Button("Continue on this device") {
-                if let raw = box.store.loginOnThisDevice(username, password) {
-                    notice = userNotice(from: raw)
-                }
+                signInOnDevice(username: username, password: password)
             }
             .buttonStyle(.plain)
-            .font(.subheadline.weight(.semibold))
+            .font(.body.weight(.semibold))
             .foregroundStyle(LoginPalette.ink)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 48)
+            .frame(minHeight: 44)
             .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(LoginPalette.line, lineWidth: 1)
             )
-            .padding(.top, 2)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(LoginView.deviceRoles, id: \.username) { role in
+                        Button(role.label) {
+                            username = role.username
+                            password = "ChangeMe"
+                            signInOnDevice(username: role.username, password: "ChangeMe")
+                        }
+                        .buttonStyle(.plain)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(LoginPalette.ink)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 32)
+                        .background(LoginPalette.field, in: Capsule())
+                        .overlay(Capsule().stroke(LoginPalette.line, lineWidth: 1))
+                    }
+                }
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    private static let deviceRoles: [(label: String, username: String)] = [
+        ("Admin", "admin"),
+        ("Finance", "accountant"),
+        ("HR", "hr"),
+        ("Procurement", "procurement"),
+        ("Projects", "pm"),
+        ("Stores", "stores"),
+    ]
+
+    private func signInOnDevice(username: String, password: String) {
+        if let raw = box.store.loginOnThisDevice(username, password) {
+            notice = userNotice(from: raw)
         }
     }
 
