@@ -101,7 +101,7 @@ struct LoginView: View {
                         .font(.body.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
-                .frame(minHeight: 52)
+                .frame(minHeight: 44)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)

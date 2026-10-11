@@ -16,14 +16,12 @@ struct DepartmentView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     if !module.description.isEmpty {
                         Text(module.description)
-                            .font(.subheadline)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Text("\(entities.count) features")
-                        .font(.title3.weight(.bold))
                     if entities.isEmpty {
                         IagEmptyHint(text: "No features match.", systemName: "square.grid.2x2")
-                            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     } else {
                         IagGrouped {
                             ForEach(Array(entities.enumerated()), id: \.element) { index, entity in
@@ -37,11 +35,11 @@ struct DepartmentView: View {
                                     DeskRow(
                                         title: entity,
                                         subtitle: "\(store.count(moduleId: moduleId, entity: entity)) records",
-                                        systemName: module.icon,
+                                        systemName: entityIcon(entity),
                                         color: iagColor(module.color)
                                     )
                                     .padding(.horizontal, 14)
-                                    .padding(.vertical, 12)
+                                    .padding(.vertical, 8)
                                 }
                                 .buttonStyle(.plain)
                                 if index < entities.count - 1 { IagRowDivider() }
@@ -83,20 +81,20 @@ struct EntityListView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if moduleId == "reports" {
-                        Text("Snapshot").font(.title3.weight(.bold))
+                        Text("Snapshot").font(.subheadline.weight(.semibold))
                         IagGrouped {
-                            VStack(alignment: .leading, spacing: 10) {
-                                ForEach(reportLines(for: entity), id: \.0) { line in
-                                    LabeledContent(line.0, value: line.1)
-                                }
+                            ForEach(Array(reportLines(for: entity).enumerated()), id: \.element.0) { index, line in
+                                IagKeyValue(label: line.0, value: line.1)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
+                                if index < reportLines(for: entity).count - 1 { IagRowDivider() }
                             }
-                            .padding(16)
                         }
                     }
-                    Text(entity).font(.title3.weight(.bold))
+                    Text(entity).font(.subheadline.weight(.semibold))
                     if rows.isEmpty {
                         IagEmptyHint(text: "No \(entity.lowercased()) yet.", systemName: "tray")
-                            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     } else {
                         IagGrouped {
                             ForEach(Array(rows.enumerated()), id: \.element.id) { index, rec in
@@ -104,21 +102,22 @@ struct EntityListView: View {
                                     RecordDetailView(recordId: rec.id)
                                 } label: {
                                     HStack(alignment: .center, spacing: 12) {
-                                        IagIconWell(systemName: "doc.text", color: statusColor(rec.status))
-                                        VStack(alignment: .leading, spacing: 3) {
+                                        IagIconWell(systemName: entityIcon(entity), color: statusColor(rec.status), size: 32)
+                                        VStack(alignment: .leading, spacing: 2) {
                                             Text(rec.title)
-                                                .font(.body.weight(.medium))
+                                                .font(.subheadline.weight(.medium))
                                                 .foregroundStyle(.primary)
+                                                .lineLimit(1)
                                             Text(rec.subtitle)
-                                                .font(.footnote)
+                                                .font(.caption)
                                                 .foregroundStyle(.secondary)
                                                 .lineLimit(1)
                                         }
                                         Spacer(minLength: 8)
-                                        VStack(alignment: .trailing, spacing: 6) {
+                                        VStack(alignment: .trailing, spacing: 4) {
                                             if let amount = rec.amount {
                                                 Text(formatMoney(amount))
-                                                    .font(.subheadline.weight(.semibold))
+                                                    .font(.caption.weight(.semibold))
                                                     .monospacedDigit()
                                                     .foregroundStyle(.primary)
                                             }
@@ -126,7 +125,7 @@ struct EntityListView: View {
                                         }
                                     }
                                     .padding(.horizontal, 14)
-                                    .padding(.vertical, 12)
+                                    .padding(.vertical, 8)
                                 }
                                 .buttonStyle(.plain)
                                 if index < rows.count - 1 { IagRowDivider() }
@@ -175,7 +174,7 @@ struct RecordDetailView: View {
                             }
                             if let amount = record.amount {
                                 Text(formatMoney(amount))
-                                    .font(.system(size: 32, weight: .bold))
+                                    .font(.title2.weight(.medium))
                                     .monospacedDigit()
                             }
                             if !record.subtitle.isEmpty {
@@ -186,77 +185,26 @@ struct RecordDetailView: View {
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
-                        .padding(16)
+                        .padding(14)
                     }
                     if !record.fields.isEmpty {
-                        Text("Details").font(.title3.weight(.bold))
+                        Text("Details").font(.subheadline.weight(.semibold))
+                        let fields = record.fields.sorted { $0.key < $1.key }
                         IagGrouped {
-                            VStack(alignment: .leading, spacing: 10) {
-                                ForEach(record.fields.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
-                                    LabeledContent(key, value: value)
-                                }
-                            }
-                            .padding(16)
-                        }
-                    }
-                    if let message { Text(message).foregroundStyle(.red) }
-                if record.status.lowercased() == "draft" {
-                    Button("Submit") {
-                        Task {
-                            let result = box.store.remoteSession
-                                ? await box.store.submitRecordAsync(record)
-                                : box.store.submitRecord(record)
-                            await MainActor.run { message = result ?? "Submitted." }
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(IagTheme.leaf)
-                }
-                if store.canApproveModule(record.moduleId) && store.isOpenStatus(record.status) {
-                    Button("Approve") {
-                        Task {
-                            let result = box.store.remoteSession
-                                ? await box.store.approveRecordAsync(record)
-                                : box.store.approveRecord(record)
-                            await MainActor.run { message = result ?? "Approved." }
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(IagTheme.leaf)
-                    Button("Reject", role: .destructive) {
-                        Task {
-                            let result = box.store.remoteSession
-                                ? await box.store.rejectRecordAsync(record)
-                                : box.store.rejectRecord(record)
-                            await MainActor.run { message = result ?? "Rejected." }
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                }
-                if store.canVoid(record.moduleId) {
-                    Button("Void", role: .destructive) {
-                        Task {
-                            let result = box.store.remoteSession
-                                ? await box.store.voidRecordAsync(record)
-                                : box.store.voidRecord(record)
-                            await MainActor.run { message = result ?? "Voided." }
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                }
-                if store.canDelete(record.moduleId, record.entity) {
-                    Button("Delete", role: .destructive) {
-                        Task {
-                            let err = box.store.remoteSession
-                                ? await box.store.deleteRecordAsync(record)
-                                : box.store.deleteRecord(record)
-                            await MainActor.run {
-                                if let err { message = err } else { dismiss() }
+                            ForEach(Array(fields.enumerated()), id: \.element.key) { index, field in
+                                IagKeyValue(label: field.key, value: field.value)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
+                                if index < fields.count - 1 { IagRowDivider() }
                             }
                         }
                     }
-                    .buttonStyle(.bordered)
-                }
+                    if let message {
+                        Text(message)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                    recordActions(store: store, record: record)
                 }
                 .iagPage()
             }
@@ -265,6 +213,63 @@ struct RecordDetailView: View {
             .iagBar(record.title, subtitle: record.entity)
         } else {
             ContentUnavailableView("Record not found", systemImage: "doc")
+        }
+    }
+
+    @ViewBuilder
+    private func recordActions(store: ErpStore, record: ErpRecord) -> some View {
+        let draft = record.status.lowercased() == "draft"
+        let canDecide = store.canApproveModule(record.moduleId) && store.isOpenStatus(record.status)
+        let canVoid = store.canVoid(record.moduleId)
+        let canDelete = store.canDelete(record.moduleId, record.entity)
+        if draft || canDecide || canVoid || canDelete {
+            VStack(spacing: 8) {
+                if draft {
+                    recordButton("Submit", prominent: true) {
+                        let result = store.remoteSession ? await store.submitRecordAsync(record) : store.submitRecord(record)
+                        message = result ?? "Submitted."
+                    }
+                }
+                if canDecide {
+                    recordButton("Approve", prominent: true) {
+                        let result = store.remoteSession ? await store.approveRecordAsync(record) : store.approveRecord(record)
+                        message = result ?? "Approved."
+                    }
+                    recordButton("Reject", prominent: false) {
+                        let result = store.remoteSession ? await store.rejectRecordAsync(record) : store.rejectRecord(record)
+                        message = result ?? "Rejected."
+                    }
+                }
+                if canVoid {
+                    recordButton("Void", prominent: false) {
+                        let result = store.remoteSession ? await store.voidRecordAsync(record) : store.voidRecord(record)
+                        message = result ?? "Voided."
+                    }
+                }
+                if canDelete {
+                    recordButton("Delete", prominent: false) {
+                        let err = store.remoteSession ? await store.deleteRecordAsync(record) : store.deleteRecord(record)
+                        if let err { message = err } else { dismiss() }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func recordButton(_ title: String, prominent: Bool, action: @escaping () async -> Void) -> some View {
+        let label = Text(title)
+            .font(.subheadline.weight(.semibold))
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 40)
+        if prominent {
+            Button { Task { await action() } } label: { label }
+                .buttonStyle(.borderedProminent)
+                .tint(IagTheme.leaf)
+        } else {
+            Button { Task { await action() } } label: { label }
+                .buttonStyle(.bordered)
+                .tint(.red)
         }
     }
 }
@@ -280,37 +285,67 @@ struct RecordFormView: View {
     @State private var error: String?
 
     var body: some View {
-        Form {
-            if !box.store.canCreate(moduleId, entity) {
-                Text("Your role cannot create this record.")
-            } else {
-                TextField("Title", text: $title)
-                TextField("Subtitle", text: $subtitle)
-                TextField("Amount (UGX)", text: $amount)
-                    .keyboardType(.decimalPad)
-                if let error { Text(error).foregroundStyle(.red) }
-            }
-        }
-        .iagCanvas()
-        .iagBar("New \(entity)")
-        .toolbar {
-            Button("Save") {
-                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    error = "Title is required."
-                    return
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                if !box.store.canCreate(moduleId, entity) {
+                    IagEmptyHint(text: "Your role cannot create this record.", systemName: "lock")
+                        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                } else {
+                    IagGrouped {
+                        formField("Title", text: $title)
+                        IagRowDivider()
+                        formField("Subtitle", text: $subtitle)
+                        IagRowDivider()
+                        formField("Amount (UGX)", text: $amount, numeric: true)
+                    }
+                    if let error {
+                        Text(error).font(.caption).foregroundStyle(.red)
+                    }
+                    Button(action: save) {
+                        Text("Save draft")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 40)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(IagTheme.leaf)
                 }
-                box.store.addRecord(ErpRecord(
-                    id: newId(),
-                    moduleId: moduleId,
-                    entity: entity,
-                    title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                    subtitle: subtitle.trimmingCharacters(in: .whitespacesAndNewlines),
-                    status: "Draft",
-                    date: todayIsoDate(),
-                    amount: Double(amount.trimmingCharacters(in: .whitespacesAndNewlines))
-                ))
-                dismiss()
             }
+            .iagPage()
         }
+        .scrollIndicators(.hidden)
+        .background(IagTheme.canvas.ignoresSafeArea())
+        .iagBar("New \(entity)")
+    }
+
+    private func formField(_ label: String, text: Binding<String>, numeric: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            TextField(label, text: text)
+                .font(.subheadline)
+                .keyboardType(numeric ? .decimalPad : .default)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    private func save() {
+        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            error = "Title is required."
+            return
+        }
+        box.store.addRecord(ErpRecord(
+            id: newId(),
+            moduleId: moduleId,
+            entity: entity,
+            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            subtitle: subtitle.trimmingCharacters(in: .whitespacesAndNewlines),
+            status: "Draft",
+            date: todayIsoDate(),
+            amount: Double(amount.trimmingCharacters(in: .whitespacesAndNewlines))
+        ))
+        dismiss()
     }
 }

@@ -9,11 +9,13 @@ struct ErpIOSApp: App {
     init() {
         let canvas = UIColor { trait in
             trait.userInterfaceStyle == .dark
-                ? UIColor(red: 0.07, green: 0.09, blue: 0.08, alpha: 1)
-                : UIColor(red: 244 / 255, green: 247 / 255, blue: 245 / 255, alpha: 1)
+                ? UIColor(red: 0.07, green: 0.07, blue: 0.08, alpha: 1)
+                : UIColor(red: 248 / 255, green: 248 / 255, blue: 247 / 255, alpha: 1)
         }
         let card = UIColor { trait in
-            trait.userInterfaceStyle == .dark ? .secondarySystemGroupedBackground : .white
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.12, green: 0.12, blue: 0.13, alpha: 1)
+                : .white
         }
         UITableView.appearance().backgroundColor = canvas
         UICollectionView.appearance().backgroundColor = canvas
@@ -49,48 +51,17 @@ final class StoreBox: ObservableObject {
 
 struct RootView: View {
     @EnvironmentObject var box: StoreBox
-    @State private var showSplash = true
 
     var body: some View {
         let _ = box.tick
-        ZStack {
-            Group {
-                if box.store.isSignedIn {
-                    ShellView()
-                        .preferredColorScheme(box.store.themeMode == "dark" ? .dark : box.store.themeMode == "light" ? .light : nil)
-                } else {
-                    LoginView()
-                        .preferredColorScheme(.light)
-                }
+        Group {
+            if box.store.isSignedIn {
+                ShellView()
+                    .preferredColorScheme(box.store.themeMode == "dark" ? .dark : box.store.themeMode == "light" ? .light : nil)
+            } else {
+                LoginView()
+                    .preferredColorScheme(.light)
             }
-            if showSplash {
-                SplashView()
-                    .transition(.opacity)
-                    .zIndex(1)
-            }
-        }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.35) {
-                withAnimation(.easeOut(duration: 0.35)) { showSplash = false }
-            }
-        }
-    }
-}
-
-struct SplashView: View {
-    @State private var appear = false
-
-    var body: some View {
-        ZStack {
-            Color(red: 10 / 255, green: 10 / 255, blue: 12 / 255).ignoresSafeArea()
-            IagBrandLogo(height: 96, mono: false)
-                .padding(.horizontal, 56)
-                .opacity(appear ? 1 : 0)
-                .scaleEffect(appear ? 1 : 0.96)
-        }
-        .preferredColorScheme(.dark)
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.55)) { appear = true }
         }
     }
 }
@@ -101,16 +72,31 @@ enum IagTheme {
     static let orangeDeep = Color(red: 194 / 255, green: 78 / 255, blue: 16 / 255)
     static let ink = Color(red: 17 / 255, green: 17 / 255, blue: 19 / 255)
     static let success = Color(red: 22 / 255, green: 128 / 255, blue: 92 / 255)
-    static let leaf = Color(red: 23 / 255, green: 122 / 255, blue: 74 / 255)
+    static let leaf = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.45, green: 0.84, blue: 0.64, alpha: 1)
+            : UIColor(red: 23 / 255, green: 122 / 255, blue: 74 / 255, alpha: 1)
+    })
+    static let onLeaf = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.04, green: 0.14, blue: 0.08, alpha: 1)
+            : .white
+    })
     static let canvas = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.07, green: 0.09, blue: 0.08, alpha: 1)
-            : UIColor(red: 244 / 255, green: 247 / 255, blue: 245 / 255, alpha: 1)
+            ? UIColor(red: 0.07, green: 0.07, blue: 0.08, alpha: 1)
+            : UIColor(red: 248 / 255, green: 248 / 255, blue: 247 / 255, alpha: 1)
     })
     static let card = Color(uiColor: UIColor { trait in
-        trait.userInterfaceStyle == .dark ? .secondarySystemGroupedBackground : .white
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.12, green: 0.12, blue: 0.13, alpha: 1)
+            : .white
     })
-    static let hairline = Color.primary.opacity(0.08)
+    static let hairline = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.10)
+            : UIColor(white: 0, alpha: 0.06)
+    })
     static let muted = Color.secondary
     static let radius: CGFloat = 16
     static let radiusSm: CGFloat = 12
@@ -130,6 +116,53 @@ func iagColor(_ hex: UInt32) -> Color {
         green: Double((rgb >> 8) & 0xFF) / 255,
         blue: Double(rgb & 0xFF) / 255
     )
+}
+
+func entityIcon(_ name: String) -> String {
+    let s = name.lowercased()
+    if s.contains("clock") || s.contains("punch") || s.contains("attendance") { return "clock" }
+    if s.contains("leave") || s.contains("holiday") { return "airplane" }
+    if s.contains("payslip") || s.contains("payroll") || s.contains("remittance") { return "banknote" }
+    if s.contains("employee") || s.contains("onboarding") || s.contains("job position") { return "person.text.rectangle" }
+    if s.contains("customer") || s.contains("portal") { return "person.crop.circle" }
+    if s.contains("supplier") { return "person.2" }
+    if s.contains("lead") { return "person.badge.plus" }
+    if s.contains("opportunit") { return "target" }
+    if s.contains("contact") || s.contains("account") && s.contains("crm") { return "person.crop.rectangle" }
+    if s.contains("invoice") || s.contains("credit note") || s.contains("debit note") { return "doc.text" }
+    if s.contains("quote") { return "doc.plaintext" }
+    if s.contains("sales order") || s.contains("distribution order") { return "bag" }
+    if s.contains("purchase order") { return "cart" }
+    if s.contains("goods receipt") || s.contains("grn") { return "shippingbox" }
+    if s.contains("receipt") { return "arrow.down.circle" }
+    if s.contains("payment") || s.contains("ipc") { return "arrow.up.circle" }
+    if s.contains("claim") { return "receipt" }
+    if s.contains("journal") || s.contains("ledger") || s.contains("trial balance") || s.contains("chart of accounts") { return "book.closed" }
+    if s.contains("bank") || s.contains("reconcil") || s.contains("transfer") { return "building.columns" }
+    if s.contains("balance sheet") || s.contains("profit") || s.contains("cash flow") || s.contains("report") || s.contains("aged") || s.contains("budget") || s.contains("forecast") { return "chart.bar" }
+    if s.contains("warehouse") || s.contains("stock") || s.contains("inventory") || s.contains("item") || s.contains("kit") { return "cube.box" }
+    if s.contains("roast") { return "flame" }
+    if s.contains("machine") || s.contains("batch") || s.contains("bill of material") || s.contains("production") || s.contains("yield") || s.contains("downtime") { return "gearshape.2" }
+    if s.contains("vehicle") || s.contains("driver") || s.contains("trip") || s.contains("fleet") { return "car" }
+    if s.contains("fuel") { return "fuelpump" }
+    if s.contains("maintenance") || s.contains("service reminder") { return "wrench.and.screwdriver" }
+    if s.contains("gate") { return "lock.open" }
+    if s.contains("visitor") { return "person.badge.key" }
+    if s.contains("incident") || s.contains("non-conformance") || s.contains("complaint") { return "exclamationmark.triangle" }
+    if s.contains("contract") || s.contains("bond") || s.contains("amendment") { return "signature" }
+    if s.contains("project") || s.contains("gantt") || s.contains("variation") { return "briefcase" }
+    if s.contains("folder") || s.contains("cabinet") { return "folder" }
+    if s.contains("document") || s.contains("file") || s.contains("version") || s.contains("attachment") { return "doc" }
+    if s.contains("shipment") || s.contains("dispatch") || s.contains("delivery") || s.contains("route") || s.contains("carrier") || s.contains("picking") || s.contains("packing") { return "box.truck" }
+    if s.contains("lab") || s.contains("sample") || s.contains("experiment") || s.contains("formulation") || s.contains("sensory") { return "flask" }
+    if s.contains("quality") || s.contains("inspection") || s.contains("capa") || s.contains("release") { return "checkmark.seal" }
+    if s.contains("pos") || s.contains("ticket") || s.contains("register") || s.contains("till") || s.contains("closing") { return "creditcard" }
+    if s.contains("table") { return "table.furniture" }
+    if s.contains("asset") || s.contains("depreciation") || s.contains("lease") || s.contains("amortization") { return "building.2" }
+    if s.contains("capital") || s.contains("share") || s.contains("investment") { return "chart.pie" }
+    if s.contains("request") { return "list.clipboard" }
+    if s.contains("site") || s.contains("block") || s.contains("department") { return "mappin.and.ellipse" }
+    return "square.grid.2x2"
 }
 
 func statusColor(_ status: String) -> Color {
@@ -182,7 +215,7 @@ struct IagIconWell: View {
         ZStack {
             Circle().fill(color.opacity(0.14))
             Image(systemName: systemName)
-                .font(.system(size: size * 0.4, weight: .semibold))
+                .font(.system(size: size * 0.38, weight: .medium))
                 .foregroundStyle(color)
                 .symbolRenderingMode(.hierarchical)
         }
@@ -226,16 +259,16 @@ struct DeskRow: View {
     var status: String? = nil
 
     var body: some View {
-        HStack(spacing: 14) {
-            IagIconWell(systemName: systemName, color: color)
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(spacing: 12) {
+            IagIconWell(systemName: systemName, color: color, size: 32)
+            VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .font(.body.weight(.medium))
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
                 Text(subtitle)
-                    .font(.footnote)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(1)
             }
             Spacer(minLength: 8)
             if let status { StatusPill(text: status) }
@@ -252,7 +285,7 @@ struct IagSectionHeader: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.title3.weight(.bold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.primary)
             Spacer()
             if let accessory {
@@ -287,8 +320,29 @@ struct IagGrouped<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
         VStack(spacing: 0) { content }
-            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .shadow(color: Color.black.opacity(0.05), radius: 12, y: 4)
+            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(IagTheme.hairline, lineWidth: 0.5)
+            )
+    }
+}
+
+struct IagKeyValue: View {
+    var label: String
+    var value: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 8)
+            Text(value)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.trailing)
+        }
     }
 }
 
@@ -356,7 +410,7 @@ struct QuickActionButton: View {
                 if badge > 0 {
                     Text(badge > 9 ? "9+" : "\(badge)")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(IagTheme.onLeaf)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
                         .background(IagTheme.leaf, in: Capsule())
@@ -387,7 +441,7 @@ struct TodayActionCard: View {
                 if badge > 0 {
                     Text(badge > 9 ? "9+" : "\(badge)")
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(IagTheme.onLeaf)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
                         .background(IagTheme.leaf, in: Capsule())
@@ -488,7 +542,7 @@ struct WelcomeCard: View {
                     }
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 12)
+                .padding(.vertical, 8)
                 .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: IagTheme.radiusSm, style: .continuous))
             }
         }
@@ -562,9 +616,9 @@ extension View {
 
     func iagPage() -> some View {
         self
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 28)
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .padding(.bottom, 20)
     }
 
     func iagCard() -> some View {

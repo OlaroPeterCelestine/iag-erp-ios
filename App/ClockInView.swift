@@ -75,93 +75,119 @@ struct ClockInView: View {
             return verifyAgainstZones(GeoPoint(latitude: lat, longitude: lng), store.geofenceZones(), accuracyMeters: gps.accuracy)
         }()
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 16) {
                 IagGrouped {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(alignment: .center, spacing: 14) {
-                        ZStack {
-                            Circle()
-                                .fill((open == nil ? IagTheme.muted : IagTheme.success).opacity(0.16))
-                                .frame(width: 56, height: 56)
-                            Image(systemName: open == nil ? "moon.zzz.fill" : "checkmark.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(open == nil ? IagTheme.muted : IagTheme.success)
-                        }
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(open == nil ? "Clocked out" : "On the clock")
-                                .font(.title3.weight(.semibold))
-                            Text(store.user?.name ?? "Staff")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            if let open {
-                                Text("Since \(recordField(open, "clockIn", "Clock in"))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                Text("Capture GPS, then clock in at a site.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .center, spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill((open == nil ? IagTheme.muted : IagTheme.success).opacity(0.16))
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: open == nil ? "moon.zzz" : "checkmark")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(open == nil ? IagTheme.muted : IagTheme.success)
                             }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(open == nil ? "Clocked out" : "On the clock")
+                                    .font(.subheadline.weight(.semibold))
+                                Text(store.user?.name ?? "Staff")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                if let open {
+                                    Text("Since \(recordField(open, "clockIn", "Clock in"))")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text("Capture GPS, then clock in at a site.")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer(minLength: 0)
                         }
-                        Spacer(minLength: 0)
-                    }
-                    if let check {
-                        VStack(alignment: .leading, spacing: 6) {
+                        if let check {
                             StatusPill(text: check.status)
                             Text(check.note)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                    }
-                    Button {
-                        guard let lat = gps.latitude, let lng = gps.longitude else {
-                            message = "Capture GPS first, or use the Head Office demo pin."
-                            return
+                        Button {
+                            guard let lat = gps.latitude, let lng = gps.longitude else {
+                                message = "Capture GPS first, or use the Head Office demo pin."
+                                return
+                            }
+                            message = store.punch(kind: open == nil ? "in" : "out", latitude: lat, longitude: lng, accuracy: gps.accuracy)
+                        } label: {
+                            Text(open == nil ? "Clock in" : "Clock out")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: 40)
                         }
-                        message = store.punch(kind: open == nil ? "in" : "out", latitude: lat, longitude: lng, accuracy: gps.accuracy)
-                    } label: {
-                        Text(open == nil ? "Clock in" : "Clock out")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: 48)
+                        .buttonStyle(.borderedProminent)
+                        .tint(IagTheme.leaf)
+                        .disabled(!store.canClockIn)
+                        if let message {
+                            Text(message)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(IagTheme.leaf)
-                    .controlSize(.large)
-                    .disabled(!store.canClockIn)
-                    if let message {
-                        Text(message)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(16)
+                    .padding(14)
                 }
 
-                Text("Location").font(.title3.weight(.bold))
+                Text("Location").font(.subheadline.weight(.semibold))
                 IagGrouped {
-                    VStack(alignment: .leading, spacing: 12) {
-                if let lat = gps.latitude, let lng = gps.longitude {
-                    LabeledContent("GPS", value: String(format: "%.5f, %.5f", lat, lng))
-                    LabeledContent("Accuracy", value: "\(Int(gps.accuracy.rounded())) m")
-                } else {
-                    Text("Waiting for GPS…").foregroundStyle(.secondary)
-                }
-                Button(gps.busy ? "Reading GPS…" : "Refresh GPS") { gps.refresh() }
-                    .disabled(gps.busy)
-                Button("Use IAG Head Office (demo)") { gps.useHq() }
-                if let err = gps.error {
-                    Text(err).foregroundStyle(.red)
-                }
+                    if let lat = gps.latitude, let lng = gps.longitude {
+                        IagKeyValue(label: "GPS", value: String(format: "%.5f, %.5f", lat, lng))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                        IagRowDivider()
+                        IagKeyValue(label: "Accuracy", value: "\(Int(gps.accuracy.rounded())) m")
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                        IagRowDivider()
+                    } else {
+                        Text("Waiting for GPS…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                        IagRowDivider()
                     }
-                    .padding(16)
+                    Button { gps.refresh() } label: {
+                        Label(gps.busy ? "Reading GPS…" : "Refresh GPS", systemImage: "location")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(IagTheme.leaf)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(gps.busy)
+                    IagRowDivider()
+                    Button { gps.useHq() } label: {
+                        Label("Head Office demo pin", systemImage: "mappin")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(IagTheme.leaf)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    if let err = gps.error {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 12)
+                    }
                 }
 
-                Text("My punches").font(.title3.weight(.bold))
+                Text("My punches").font(.subheadline.weight(.semibold))
                 let punches = store.myPunches()
                 if punches.isEmpty {
                     IagEmptyHint(text: "No punches yet.", systemName: "clock")
-                        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 } else {
                     IagGrouped {
                         ForEach(Array(punches.prefix(12).enumerated()), id: \.element.id) { index, rec in
@@ -176,7 +202,7 @@ struct ClockInView: View {
                                     status: rec.status
                                 )
                                 .padding(.horizontal, 14)
-                                .padding(.vertical, 12)
+                                .padding(.vertical, 8)
                             }
                             .buttonStyle(.plain)
                             if index < min(punches.count, 12) - 1 { IagRowDivider() }

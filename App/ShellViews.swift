@@ -55,6 +55,7 @@ struct ShellView: View {
                 .tag(ShellTab.more)
         }
         .tint(IagTheme.leaf)
+        .toolbarColorScheme(box.store.themeMode == "dark" ? .dark : box.store.themeMode == "light" ? .light : nil, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarBackground(IagTheme.card, for: .tabBar)
         .environment(\.shellTab, $tab)
@@ -64,7 +65,9 @@ struct ShellView: View {
 struct FinHome: View {
     @Environment(\.shellTab) private var shellTab
     var name: String
+    var fullName: String
     var detail: String
+    var stats: [WelcomeStat]
     var actions: [QuickAction]
     var approvalCount: Int
     var canOpenApprovals: Bool
@@ -83,7 +86,7 @@ struct FinHome: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 16) {
                 header
                 if searching {
                     searchField
@@ -91,16 +94,14 @@ struct FinHome: View {
                 if searching && query.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 {
                     searchResults
                 } else if !searching {
-                    walletRow
-                    if !actions.isEmpty { quickActions }
-                    if !frequentApps.isEmpty || !recents.isEmpty { frequents }
+                    welcomeCard
+                    if !actions.isEmpty || !frequentApps.isEmpty || !recents.isEmpty { quickActions }
                     if !pending.isEmpty { waiting }
-                    explore
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 28)
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .padding(.bottom, 20)
         }
         .scrollIndicators(.hidden)
         .background(IagTheme.canvas.ignoresSafeArea())
@@ -108,23 +109,23 @@ struct FinHome: View {
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            IagAvatar(name: name, size: 44)
-            VStack(alignment: .leading, spacing: 1) {
+        HStack(alignment: .center, spacing: 10) {
+            IagAvatar(name: name, size: 32)
+            VStack(alignment: .leading, spacing: 0) {
                 Text(iagGreeting())
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                 Text(name)
-                    .font(.title3.weight(.bold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
             }
             Spacer(minLength: 8)
-            HStack(spacing: 14) {
+            HStack(spacing: 16) {
                 if let onLeaveApp {
                     Button(action: onLeaveApp) {
                         Image(systemName: "square.grid.2x2")
-                            .font(.title3)
+                            .font(.body.weight(.medium))
                             .foregroundStyle(.primary)
                     }
                     .buttonStyle(.plain)
@@ -135,7 +136,7 @@ struct FinHome: View {
                     if !searching { query = "" }
                 } label: {
                     Image(systemName: "magnifyingglass")
-                        .font(.title3)
+                        .font(.body.weight(.medium))
                         .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
@@ -146,12 +147,12 @@ struct FinHome: View {
                 } label: {
                     ZStack(alignment: .topTrailing) {
                         Image(systemName: "bell")
-                            .font(.title3)
+                            .font(.body.weight(.medium))
                             .foregroundStyle(.primary)
                         if approvalCount > 0 {
                             Text(approvalCount > 9 ? "9+" : "\(approvalCount)")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(IagTheme.onLeaf)
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1)
                                 .background(IagTheme.leaf, in: Capsule())
@@ -165,7 +166,7 @@ struct FinHome: View {
                     ProfileView()
                 } label: {
                     Image(systemName: "person.circle")
-                        .font(.title2)
+                        .font(.body.weight(.medium))
                         .foregroundStyle(.primary)
                 }
                 .accessibilityLabel("Account")
@@ -199,111 +200,127 @@ struct FinHome: View {
     private var searchResults: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Results")
-                .font(.title3.weight(.bold))
+                .font(.subheadline.weight(.semibold))
             if hits.isEmpty {
                 Text("No matches in desks, features, or records.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(18)
-                    .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .finShadow()
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(hits.enumerated()), id: \.element.id) { index, hit in
                         SearchHitRow(hit: hit)
                             .padding(.horizontal, 14)
-                            .padding(.vertical, 12)
+                            .padding(.vertical, 8)
                         if index < hits.count - 1 {
                             Divider().padding(.leading, 66)
                         }
                     }
                 }
-                .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .finShadow()
             }
         }
     }
 
-    private var walletRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                if kpis.isEmpty {
-                    statCard(label: detail, value: "\(approvalCount)", hint: "Waiting", showsButton: true)
-                        .frame(width: 300)
-                } else {
-                    ForEach(Array(kpis.prefix(3).enumerated()), id: \.offset) { index, kpi in
-                        statCard(label: kpi.label, value: kpi.value, hint: kpi.hint, showsButton: index == 0)
-                            .frame(width: 300)
+    private var welcomeCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Welcome")
+                    .font(.caption.weight(.medium))
+                    .tracking(0.4)
+                    .foregroundStyle(.secondary)
+                Text(fullName)
+                    .font(.title3.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if !stats.isEmpty {
+                HStack(spacing: 0) {
+                    ForEach(Array(stats.enumerated()), id: \.element.id) { index, stat in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(stat.value)
+                                .font(.subheadline.weight(.semibold))
+                                .monospacedDigit()
+                                .foregroundStyle(.primary)
+                            Text(stat.label)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        if index < stats.count - 1 {
+                            Rectangle()
+                                .fill(IagTheme.hairline)
+                                .frame(width: 0.5, height: 22)
+                                .padding(.horizontal, 4)
+                        }
                     }
                 }
             }
-            .padding(.vertical, 2)
-        }
-    }
-
-    private func statCard(label: String, value: String, hint: String, showsButton: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(label)
-                    .font(.subheadline)
+            if !kpis.isEmpty {
+                Rectangle().fill(IagTheme.hairline).frame(height: 0.5)
+                Text("Stats report")
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                Text(hint)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-            }
-            if showsButton {
-                Button {
-                    shellTab.wrappedValue = approvalCount > 0 ? .approvals : .desks
-                } label: {
-                    Text(approvalCount > 0 ? "View approvals" : "View desks")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(IagTheme.leaf)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 44)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(IagTheme.leaf.opacity(0.45), lineWidth: 1)
-                        )
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], spacing: 10) {
+                    ForEach(Array(kpis.enumerated()), id: \.offset) { _, kpi in
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(kpi.label)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text(kpi.value)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
-                .buttonStyle(.plain)
             }
         }
-        .padding(18)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .finShadow()
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(IagTheme.hairline, lineWidth: 0.5)
+        )
     }
 
     private var quickActions: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Quick actions")
-                    .font(.title3.weight(.bold))
-                Spacer()
-                Button("View all") { shellTab.wrappedValue = .desks }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(IagTheme.leaf)
-                    .buttonStyle(.plain)
+        VStack(alignment: .leading, spacing: 12) {
+            if !actions.isEmpty {
+                HStack {
+                    Text("Quick actions")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Button("View all") { shellTab.wrappedValue = .desks }
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(IagTheme.leaf)
+                        .buttonStyle(.plain)
+                }
             }
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 18) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 12) {
                 ForEach(actions) { action in
                     QuickActionOpener(action: action) {
-                        VStack(spacing: 8) {
+                        VStack(spacing: 6) {
                             ZStack(alignment: .topTrailing) {
                                 Circle()
-                                    .fill(IagTheme.leaf.opacity(0.12))
-                                    .frame(width: 48, height: 48)
+                                    .fill(iagColor(action.color).opacity(0.12))
+                                    .frame(width: 36, height: 36)
                                     .overlay {
                                         Image(systemName: action.icon)
-                                            .font(.system(size: 18, weight: .semibold))
-                                            .foregroundStyle(IagTheme.leaf)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(iagColor(action.color))
+                                            .symbolRenderingMode(.hierarchical)
                                     }
                                 if action.kind == .approvals && approvalCount > 0 {
                                     Circle()
@@ -313,29 +330,41 @@ struct FinHome: View {
                                 }
                             }
                             Text(action.label)
-                                .font(.caption.weight(.medium))
+                                .font(.caption2.weight(.medium))
                                 .foregroundStyle(.primary)
                                 .multilineTextAlignment(.center)
                                 .lineLimit(2)
                                 .minimumScaleFactor(0.8)
-                                .frame(height: 32, alignment: .top)
+                                .frame(height: 26, alignment: .top)
                         }
                         .frame(maxWidth: .infinity)
                     }
                 }
             }
+            if !frequentApps.isEmpty || !recents.isEmpty {
+                if !actions.isEmpty {
+                    Rectangle()
+                        .fill(IagTheme.hairline)
+                        .frame(height: 0.5)
+                }
+                frequents
+            }
         }
-        .padding(16)
-        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .finShadow()
+        .padding(12)
+        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(IagTheme.hairline, lineWidth: 0.5)
+        )
     }
 
     private var frequents: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(frequentApps.isEmpty ? "Jump back" : "Your apps")
-                .font(.title3.weight(.bold))
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 18) {
+                HStack(spacing: 14) {
                     ForEach(frequentApps) { app in
                         Button {
                             onOpenApp(app.id)
@@ -344,10 +373,10 @@ struct FinHome: View {
                             VStack(spacing: 8) {
                                 ZStack {
                                     Circle()
-                                        .fill(iagColor(app.color).opacity(0.14))
-                                        .frame(width: 56, height: 56)
+                                        .fill(iagColor(app.color).opacity(0.1))
+                                        .frame(width: 40, height: 40)
                                     Image(systemName: app.icon)
-                                        .font(.system(size: 20, weight: .semibold))
+                                        .font(.system(size: 15, weight: .medium))
                                         .foregroundStyle(iagColor(app.color))
                                 }
                                 Text(app.label)
@@ -355,7 +384,7 @@ struct FinHome: View {
                                     .foregroundStyle(.primary)
                                     .multilineTextAlignment(.center)
                                     .lineLimit(2)
-                                    .frame(width: 72)
+                                    .frame(width: 64)
                             }
                         }
                         .buttonStyle(.plain)
@@ -367,10 +396,10 @@ struct FinHome: View {
                             VStack(spacing: 8) {
                                 ZStack {
                                     Circle()
-                                        .fill(statusColor(rec.status).opacity(0.14))
-                                        .frame(width: 56, height: 56)
+                                        .fill(statusColor(rec.status).opacity(0.1))
+                                        .frame(width: 40, height: 40)
                                     Image(systemName: "doc.text")
-                                        .font(.system(size: 18, weight: .semibold))
+                                        .font(.system(size: 14, weight: .medium))
                                         .foregroundStyle(statusColor(rec.status))
                                 }
                                 Text(rec.title)
@@ -378,7 +407,7 @@ struct FinHome: View {
                                     .foregroundStyle(.primary)
                                     .multilineTextAlignment(.center)
                                     .lineLimit(2)
-                                    .frame(width: 72)
+                                    .frame(width: 64)
                             }
                         }
                         .buttonStyle(.plain)
@@ -392,10 +421,10 @@ struct FinHome: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Waiting for you")
-                    .font(.title3.weight(.bold))
+                    .font(.subheadline.weight(.semibold))
                 Spacer()
                 Button("View all") { shellTab.wrappedValue = .approvals }
-                    .font(.subheadline.weight(.semibold))
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(IagTheme.leaf)
                     .buttonStyle(.plain)
             }
@@ -424,53 +453,29 @@ struct FinHome: View {
                             Spacer()
                             StatusPill(text: rec.status)
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
                     }
                     .buttonStyle(.plain)
                     if index < pending.count - 1 { Divider().padding(.leading, 66) }
                 }
             }
-            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .finShadow()
+            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(IagTheme.hairline, lineWidth: 0.5)
+            )
         }
     }
 
-    private var explore: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Explore desks")
-                .font(.title3.weight(.bold))
-            Button {
-                shellTab.wrappedValue = .desks
-            } label: {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(detail)
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(.white)
-                    Text("Banking, sales, people, fleet, and the rest of \(appName), on this phone.")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.92))
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("Open desks")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(IagTheme.leaf)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(.white, in: Capsule())
-                        .padding(.top, 4)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(18)
-                .background(IagTheme.leaf, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            }
-            .buttonStyle(.plain)
-        }
-    }
 }
 
 private extension View {
     func finShadow() -> some View {
-        shadow(color: Color.black.opacity(0.05), radius: 12, y: 4)
+        overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(IagTheme.hairline, lineWidth: 0.5)
+        )
     }
 }
 
@@ -485,7 +490,9 @@ struct HomeView: View {
         NavigationStack {
             FinHome(
                 name: first,
+                fullName: store.user?.name ?? first,
                 detail: store.activeSuiteApp?.label ?? store.user?.role ?? appName,
+                stats: store.welcomeStats,
                 actions: Array(store.homeQuickActions.prefix(8)),
                 approvalCount: store.appPendingApprovals.count,
                 canOpenApprovals: store.canApprove,
@@ -520,7 +527,7 @@ struct DepartmentsView: View {
                     }
                     if groups.isEmpty {
                         IagEmptyHint(text: "No desks match.", systemName: "building.2")
-                            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
                     ForEach(groups, id: \.self) { group in
                         let modules = store.appModules.filter { module in
@@ -529,7 +536,7 @@ struct DepartmentsView: View {
                             return module.label.lowercased().contains(q)
                                 || module.entities.contains { $0.lowercased().contains(q) }
                         }
-                        Text(group).font(.title3.weight(.bold))
+                        Text(group).font(.subheadline.weight(.semibold))
                         IagGrouped {
                             ForEach(Array(modules.enumerated()), id: \.element.id) { index, module in
                                 NavigationLink {
@@ -542,7 +549,7 @@ struct DepartmentsView: View {
                                         color: iagColor(module.color)
                                     )
                                     .padding(.horizontal, 14)
-                                    .padding(.vertical, 12)
+                                    .padding(.vertical, 8)
                                 }
                                 .buttonStyle(.plain)
                                 .simultaneousGesture(TapGesture().onEnded {
@@ -582,10 +589,10 @@ struct ApprovalsList: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Waiting for you")
-                    .font(.title3.weight(.bold))
+                    .font(.subheadline.weight(.semibold))
                 if box.store.appPendingApprovals.isEmpty {
                     IagEmptyHint(text: "Nothing is waiting for your desk.", systemName: "checkmark.circle")
-                        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 } else {
                     IagGrouped {
                         ForEach(Array(box.store.appPendingApprovals.enumerated()), id: \.element.id) { index, rec in
@@ -595,12 +602,12 @@ struct ApprovalsList: View {
                                 DeskRow(
                                     title: rec.title,
                                     subtitle: "\(rec.entity) · \(rec.subtitle)",
-                                    systemName: "checkmark",
-                                    color: IagTheme.leaf,
+                                    systemName: entityIcon(rec.entity),
+                                    color: statusColor(rec.status),
                                     status: rec.status
                                 )
                                 .padding(.horizontal, 14)
-                                .padding(.vertical, 12)
+                                .padding(.vertical, 8)
                             }
                             .buttonStyle(.plain)
                             if index < box.store.appPendingApprovals.count - 1 { IagRowDivider() }
@@ -668,18 +675,52 @@ struct QuickActionDestination: View {
 
 struct MoreView: View {
     @EnvironmentObject var box: StoreBox
+    @Environment(\.shellTab) private var shellTab
 
     var body: some View {
         let store = box.store
         let _ = box.tick
+        let name = store.user?.name ?? "Account"
+        let role = store.user?.role ?? appName
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 16) {
+                    NavigationLink {
+                        ProfileView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            IagAvatar(name: name, size: 40)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                Text(role)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer(minLength: 8)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(IagTheme.hairline, lineWidth: 0.5)
+                    )
+
                     if store.activeAppId != nil {
-                        Text("Apps").font(.title3.weight(.bold))
+                        Text("This app").font(.subheadline.weight(.semibold))
                         IagGrouped {
                             Button {
                                 store.closeApp()
+                                shellTab.wrappedValue = .home
                             } label: {
                                 DeskRow(
                                     title: "Switch app",
@@ -688,16 +729,34 @@ struct MoreView: View {
                                     color: IagTheme.leaf
                                 )
                                 .padding(.horizontal, 14)
-                                .padding(.vertical, 12)
+                                .padding(.vertical, 8)
                             }
                             .buttonStyle(.plain)
                         }
                     }
+
                     ForEach(workspaceGroups, id: \.self) { group in
                         let tools = store.visibleWorkspaceTools.filter { $0.group == group }
-                        if !tools.isEmpty {
-                            Text(group).font(.title3.weight(.bold))
+                        let showAccess = group == "Admin" && store.isAdmin
+                        if !tools.isEmpty || showAccess {
+                            Text(group).font(.subheadline.weight(.semibold))
                             IagGrouped {
+                                if showAccess {
+                                    NavigationLink {
+                                        AccessView()
+                                    } label: {
+                                        DeskRow(
+                                            title: "Users & roles",
+                                            subtitle: "Custom roles and workspace users",
+                                            systemName: "shield",
+                                            color: IagTheme.leaf
+                                        )
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                    }
+                                    .buttonStyle(.plain)
+                                    if !tools.isEmpty { IagRowDivider() }
+                                }
                                 ForEach(Array(tools.enumerated()), id: \.element.id) { index, tool in
                                     NavigationLink {
                                         WorkspaceToolView(toolId: tool.id)
@@ -709,7 +768,7 @@ struct MoreView: View {
                                             color: IagTheme.leaf
                                         )
                                         .padding(.horizontal, 14)
-                                        .padding(.vertical, 12)
+                                        .padding(.vertical, 8)
                                     }
                                     .buttonStyle(.plain)
                                     if index < tools.count - 1 { IagRowDivider() }
@@ -717,34 +776,12 @@ struct MoreView: View {
                             }
                         }
                     }
-                    Text("Account").font(.title3.weight(.bold))
-                    IagGrouped {
-                        NavigationLink {
-                            ProfileView()
-                        } label: {
-                            DeskRow(title: "Profile", subtitle: "Name, theme, and sign out", systemName: "person.crop.circle", color: IagTheme.leaf)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 12)
-                        }
-                        .buttonStyle(.plain)
-                        if store.isAdmin {
-                            IagRowDivider()
-                            NavigationLink {
-                                AccessView()
-                            } label: {
-                                DeskRow(title: "Users & roles", subtitle: "Custom roles and workspace users", systemName: "shield", color: IagTheme.leaf)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 12)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
                 }
                 .iagPage()
             }
             .scrollIndicators(.hidden)
             .background(IagTheme.canvas.ignoresSafeArea())
-            .iagBar("More", subtitle: appName)
+            .iagBar("More", subtitle: role)
         }
     }
 }
@@ -760,7 +797,9 @@ struct AppsLauncherView: View {
         NavigationStack {
             FinHome(
                 name: first,
+                fullName: store.user?.name ?? first,
                 detail: store.user?.role ?? appName,
+                stats: store.welcomeStats,
                 actions: Array(store.launcherQuickActions.prefix(8)),
                 approvalCount: store.pendingApprovals.count,
                 canOpenApprovals: store.canApprove,
@@ -787,25 +826,67 @@ struct SearchHitRow: View {
             NavigationLink {
                 DepartmentView(moduleId: hit.moduleId)
             } label: {
-                DeskRow(title: hit.title, subtitle: "Desk · \(hit.subtitle)", systemName: "building.2")
+                DeskRow(title: hit.title, subtitle: "Desk · \(hit.subtitle)", systemName: "building.columns")
             }
         case .entity:
             NavigationLink {
                 EntityListView(moduleId: hit.moduleId, entity: hit.entity ?? "")
             } label: {
-                DeskRow(title: hit.title, subtitle: "Feature · \(hit.subtitle)", systemName: "square.grid.2x2")
+                DeskRow(title: hit.title, subtitle: "Feature · \(hit.subtitle)", systemName: entityIcon(hit.title))
             }
         case .record:
             NavigationLink {
                 RecordDetailView(recordId: hit.recordId ?? "")
             } label: {
-                DeskRow(title: hit.title, subtitle: hit.subtitle, systemName: "doc.text")
+                DeskRow(title: hit.title, subtitle: hit.subtitle, systemName: entityIcon(hit.subtitle))
             }
         case .tool:
             NavigationLink {
                 WorkspaceToolView(toolId: hit.moduleId)
             } label: {
                 DeskRow(title: hit.title, subtitle: "Workspace · \(hit.subtitle)", systemName: "wrench.and.screwdriver")
+            }
+        }
+    }
+}
+
+private struct ToolCanvas<Content: View>: View {
+    @ViewBuilder var content: Content
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) { content }
+                .iagPage()
+        }
+        .scrollIndicators(.hidden)
+        .background(IagTheme.canvas.ignoresSafeArea())
+    }
+}
+
+private struct RecordToolList: View {
+    var records: [ErpRecord]
+    var empty: String
+    var icon: String
+    var subtitle: (ErpRecord) -> String = { $0.entity }
+
+    var body: some View {
+        ToolCanvas {
+            if records.isEmpty {
+                IagEmptyHint(text: empty, systemName: icon)
+                    .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            } else {
+                IagGrouped {
+                    ForEach(Array(records.enumerated()), id: \.element.id) { index, rec in
+                        NavigationLink {
+                            RecordDetailView(recordId: rec.id)
+                        } label: {
+                            DeskRow(title: rec.title, subtitle: subtitle(rec), systemName: icon, status: rec.status)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                        if index < records.count - 1 { IagRowDivider() }
+                    }
+                }
             }
         }
     }
@@ -825,153 +906,175 @@ struct WorkspaceToolView: View {
             case "clock-in":
                 ClockInView()
             case "trace":
-                List {
-                    Section("Look up a document, plate, lot, or person") {
-                        if query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
-                            Text("Type at least two characters.").foregroundStyle(.secondary)
+                ToolCanvas {
+                    if query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
+                        IagEmptyHint(text: "Type at least two characters.", systemName: "magnifyingglass")
+                            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    } else {
+                        let hits = store.searchHits(query)
+                        if hits.isEmpty {
+                            IagEmptyHint(text: "Nothing matched.", systemName: "magnifyingglass")
+                                .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                         } else {
-                            let hits = store.searchHits(query)
-                            if hits.isEmpty {
-                                Text("Nothing matched.").foregroundStyle(.secondary)
-                            } else {
-                                ForEach(hits) { hit in SearchHitRow(hit: hit) }
-                            }
-                        }
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .iagCanvas()
-                .searchable(text: $query, prompt: "IAG-LOT, SI-2026, UAX 221K…")
-            case "analytics":
-                List {
-                    Section("Workspace") {
-                        LabeledContent("Departments", value: "\(store.visibleModules.count)")
-                        LabeledContent("Features", value: "\(store.visibleModules.reduce(0) { $0 + $1.entities.count })")
-                        LabeledContent("Records", value: "\(store.records.filter { store.canOpen($0.moduleId) }.count)")
-                        LabeledContent("Pending approvals", value: "\(store.pendingApprovals.count)")
-                    }
-                    ForEach(departmentGroups, id: \.self) { group in
-                        let modules = store.visibleModules.filter { $0.group == group }
-                        if !modules.isEmpty {
-                            Section(group) {
-                                ForEach(modules, id: \.id) { module in
-                                    LabeledContent(module.label, value: "\(store.forModule(module.id).count)")
+                            IagGrouped {
+                                ForEach(Array(hits.enumerated()), id: \.element.id) { index, hit in
+                                    SearchHitRow(hit: hit)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                    if index < hits.count - 1 { IagRowDivider() }
                                 }
                             }
                         }
                     }
                 }
-                .listStyle(.insetGrouped)
-                .iagCanvas()
+                .searchable(text: $query, prompt: "IAG-LOT, SI-2026, UAX 221K…")
+            case "analytics":
+                ToolCanvas {
+                    IagGrouped {
+                        IagKeyValue(label: "Departments", value: "\(store.visibleModules.count)")
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                        IagRowDivider()
+                        IagKeyValue(label: "Features", value: "\(store.visibleModules.reduce(0) { $0 + $1.entities.count })")
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                        IagRowDivider()
+                        IagKeyValue(label: "Records", value: "\(store.records.filter { store.canOpen($0.moduleId) }.count)")
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                        IagRowDivider()
+                        IagKeyValue(label: "Pending approvals", value: "\(store.pendingApprovals.count)")
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                    }
+                    ForEach(departmentGroups, id: \.self) { group in
+                        let modules = store.visibleModules.filter { $0.group == group }
+                        if !modules.isEmpty {
+                            Text(group).font(.subheadline.weight(.semibold))
+                            IagGrouped {
+                                ForEach(Array(modules.enumerated()), id: \.element.id) { index, module in
+                                    IagKeyValue(label: module.label, value: "\(store.forModule(module.id).count)")
+                                        .padding(.horizontal, 14).padding(.vertical, 10)
+                                    if index < modules.count - 1 { IagRowDivider() }
+                                }
+                            }
+                        }
+                    }
+                }
             case "accounting-documents":
-                List {
-                    if store.accountingDocuments.isEmpty {
-                        Text("No accounting documents yet.").foregroundStyle(.secondary)
-                    } else {
-                        ForEach(store.accountingDocuments, id: \.id) { rec in
-                            NavigationLink {
-                                RecordDetailView(recordId: rec.id)
-                            } label: {
-                                DeskRow(title: rec.title, subtitle: rec.entity, systemName: "doc.richtext", status: rec.status)
-                            }
-                        }
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .iagCanvas()
+                RecordToolList(records: store.accountingDocuments, empty: "No accounting documents yet.", icon: "doc.richtext")
             case "payment-requests":
-                List {
-                    if store.pendingApprovals.isEmpty {
-                        Text("No open desk requests.").foregroundStyle(.secondary)
-                    } else {
-                        ForEach(store.pendingApprovals, id: \.id) { rec in
-                            NavigationLink {
-                                RecordDetailView(recordId: rec.id)
-                            } label: {
-                                DeskRow(title: rec.title, subtitle: "\(rec.entity) · \(rec.subtitle)", systemName: "list.clipboard", status: rec.status)
-                            }
-                        }
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .iagCanvas()
+                RecordToolList(
+                    records: store.pendingApprovals,
+                    empty: "No open desk requests.",
+                    icon: "list.clipboard",
+                    subtitle: { "\($0.entity) · \($0.subtitle)" }
+                )
             case "templates":
-                List {
-                    ForEach(erpTemplates, id: \.self) { name in
-                        Text(name)
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .iagCanvas()
-            case "comms":
-                List {
-                    ForEach(erpComms, id: \.title) { row in
-                        DeskRow(title: row.title, subtitle: row.detail, systemName: "envelope")
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .iagCanvas()
-            case "guides":
-                List {
-                    ForEach(erpGuides, id: \.title) { row in
-                        Section(row.title) { Text(row.body) }
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .iagCanvas()
-            case "qna":
-                List {
-                    ForEach(erpQnA, id: \.q) { row in
-                        Section(row.q) { Text(row.a) }
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .iagCanvas()
-            case "release-notes":
-                List {
-                    Section("\(appName) \(appVersion)") {
-                        Text("Every web ERP desk and feature is on the phone: departments, entity lists, approvals, trace, documents, and workspace tools. RBAC matches web IAG ERP.")
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .iagCanvas()
-            case "activity-logs":
-                List {
-                    ForEach(store.recent.filter { store.canOpen($0.moduleId) }, id: \.id) { rec in
-                        NavigationLink {
-                            RecordDetailView(recordId: rec.id)
-                        } label: {
-                            DeskRow(title: rec.title, subtitle: "\(rec.entity) · \(rec.date)", systemName: "clock.arrow.circlepath", status: rec.status)
+                ToolCanvas {
+                    IagGrouped {
+                        ForEach(Array(erpTemplates.enumerated()), id: \.element) { index, name in
+                            Text(name)
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                            if index < erpTemplates.count - 1 { IagRowDivider() }
                         }
                     }
                 }
-                .listStyle(.insetGrouped)
-                .iagCanvas()
-            case "system-health":
-                List {
-                    LabeledContent("App", value: "\(appName) \(appVersion)")
-                    LabeledContent("Session", value: store.remoteSession ? "Connected" : "On this device")
-                    LabeledContent("Role", value: store.user?.role ?? "—")
-                    LabeledContent("Records", value: "\(store.records.count)")
-                    LabeledContent("Roles", value: "\(store.roles.count)")
-                    LabeledContent("Workspace users", value: "\(store.workspaceUsers.count)")
-                    LabeledContent("Theme", value: store.themeMode)
-                }
-                .listStyle(.insetGrouped)
-                .iagCanvas()
-            case "settings":
-                Form {
-                    Picker("Theme", selection: Binding(
-                        get: { store.themeMode },
-                        set: { store.setThemeMode($0) }
-                    )) {
-                        Text("System").tag("system")
-                        Text("Light").tag("light")
-                        Text("Dark").tag("dark")
+            case "comms":
+                ToolCanvas {
+                    IagGrouped {
+                        ForEach(Array(erpComms.enumerated()), id: \.element.title) { index, row in
+                            DeskRow(title: row.title, subtitle: row.detail, systemName: "envelope")
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                            if index < erpComms.count - 1 { IagRowDivider() }
+                        }
                     }
-                    LabeledContent("Desks on this device", value: "\(store.visibleModules.count)")
                 }
-                .iagCanvas()
+            case "guides":
+                ToolCanvas {
+                    ForEach(erpGuides, id: \.title) { row in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(row.title).font(.subheadline.weight(.semibold))
+                            Text(row.body).font(.caption).foregroundStyle(.secondary)
+                        }
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(IagTheme.hairline, lineWidth: 0.5))
+                    }
+                }
+            case "qna":
+                ToolCanvas {
+                    ForEach(erpQnA, id: \.q) { row in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(row.q).font(.subheadline.weight(.semibold))
+                            Text(row.a).font(.caption).foregroundStyle(.secondary)
+                        }
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(IagTheme.hairline, lineWidth: 0.5))
+                    }
+                }
+            case "release-notes":
+                ToolCanvas {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("\(appName) \(appVersion)").font(.subheadline.weight(.semibold))
+                        Text("Every desk, approval, and record from the web ERP is on this phone.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(IagTheme.hairline, lineWidth: 0.5))
+                }
+            case "activity-logs":
+                RecordToolList(
+                    records: store.recent.filter { store.canOpen($0.moduleId) },
+                    empty: "No recent activity.",
+                    icon: "clock.arrow.circlepath",
+                    subtitle: { "\($0.entity) · \($0.date)" }
+                )
+            case "system-health":
+                ToolCanvas {
+                    IagGrouped {
+                        let rows: [(String, String)] = [
+                            ("App", "\(appName) \(appVersion)"),
+                            ("Session", store.remoteSession ? "Connected" : "On this device"),
+                            ("Role", store.user?.role ?? "—"),
+                            ("Records", "\(store.records.count)"),
+                            ("Roles", "\(store.roles.count)"),
+                            ("Workspace users", "\(store.workspaceUsers.count)"),
+                            ("Theme", store.themeMode),
+                        ]
+                        ForEach(Array(rows.enumerated()), id: \.element.0) { index, row in
+                            IagKeyValue(label: row.0, value: row.1)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                            if index < rows.count - 1 { IagRowDivider() }
+                        }
+                    }
+                }
+            case "settings":
+                ToolCanvas {
+                    IagGrouped {
+                        Picker("Theme", selection: Binding(
+                            get: { store.themeMode },
+                            set: { store.setThemeMode($0) }
+                        )) {
+                            Text("System").tag("system")
+                            Text("Light").tag("light")
+                            Text("Dark").tag("dark")
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(14)
+                        IagRowDivider()
+                        IagKeyValue(label: "Desks on this device", value: "\(store.visibleModules.count)")
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                    }
+                }
             default:
                 Text(tool?.description ?? "Unknown tool")
             }

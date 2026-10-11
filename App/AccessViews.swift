@@ -145,51 +145,89 @@ struct ProfileView: View {
 
     var body: some View {
         let user = box.store.user
-        Form {
-            Section {
-                HStack(spacing: 14) {
-                    IagAvatar(name: user?.name ?? "I", size: 56)
-                    VStack(alignment: .leading, spacing: 3) {
+        let theme = box.store.themeMode == "dark" ? "Dark" : box.store.themeMode == "light" ? "Light" : "System"
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 12) {
+                    IagAvatar(name: user?.name ?? "I", size: 44)
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(user?.name ?? "Account")
-                            .font(.headline)
+                            .font(.subheadline.weight(.semibold))
                         Text(user?.role ?? "")
-                            .font(.subheadline.weight(.medium))
+                            .font(.caption.weight(.medium))
                             .foregroundStyle(IagTheme.leaf)
-                        Text(box.store.remoteSession ? "Signed in to IAG" : "On this device")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text("\(appName) \(appVersion)")
+                        Text(box.store.remoteSession ? "Signed in" : "On this device")
                             .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
                     }
+                    Spacer(minLength: 8)
+                    Text(appVersion)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
                 }
-                .padding(.vertical, 4)
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(IagTheme.hairline, lineWidth: 0.5))
+
                 if let remote = box.store.lastRemoteError, !remote.isEmpty {
-                    Text(remote).foregroundStyle(.red)
+                    Text(remote).font(.caption).foregroundStyle(.red)
                 }
-            }
-            Section("Profile") {
-                TextField("Name", text: $name)
-                TextField("Email", text: $email)
-                TextField("Phone", text: $phone)
-                TextField("Title", text: $title)
-                if let message { Text(message) }
-                Button("Save profile") {
+
+                Text("Profile").font(.subheadline.weight(.semibold))
+                IagGrouped {
+                    profileField("Name", text: $name)
+                    IagRowDivider()
+                    profileField("Email", text: $email)
+                    IagRowDivider()
+                    profileField("Phone", text: $phone)
+                    IagRowDivider()
+                    profileField("Title", text: $title)
+                }
+                if let message {
+                    Text(message).font(.caption).foregroundStyle(.secondary)
+                }
+                Button {
                     Task {
                         let result = await box.store.updateProfileAsync(name: name, email: email, phone: phone, title: title)
                         await MainActor.run { message = result ?? "Saved." }
                     }
+                } label: {
+                    Text("Save profile")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 40)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(IagTheme.leaf)
+
+                Text("Preferences").font(.subheadline.weight(.semibold))
+                IagGrouped {
+                    Button {
+                        let next = box.store.themeMode == "system" ? "light" : box.store.themeMode == "light" ? "dark" : "system"
+                        box.store.setThemeMode(next)
+                    } label: {
+                        IagKeyValue(label: "Theme", value: theme)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    IagRowDivider()
+                    Button(role: .destructive) { box.store.logout() } label: {
+                        Text("Sign out")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            Section {
-                Button("Theme: \(box.store.themeMode == "dark" ? "Dark" : box.store.themeMode == "light" ? "Light" : "System")") {
-                    let next = box.store.themeMode == "system" ? "light" : box.store.themeMode == "light" ? "dark" : "system"
-                    box.store.setThemeMode(next)
-                }
-                Button("Sign out", role: .destructive) { box.store.logout() }
-            }
+            .iagPage()
         }
-        .iagCanvas()
+        .scrollIndicators(.hidden)
+        .background(IagTheme.canvas.ignoresSafeArea())
         .iagBar("Account", subtitle: appName)
         .onAppear {
             name = user?.name ?? ""
@@ -197,5 +235,18 @@ struct ProfileView: View {
             phone = user?.phone ?? ""
             title = user?.title ?? ""
         }
+    }
+
+    private func profileField(_ label: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            TextField(label, text: text)
+                .font(.subheadline)
+                .textInputAutocapitalization(label == "Email" ? .never : .words)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
 }
