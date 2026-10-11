@@ -21,7 +21,7 @@ struct AccessView: View {
             }
         }
         .iagCanvas()
-        .navigationTitle("Access")
+        .iagBar("Access", subtitle: "More")
         .task { await box.store.refreshDirectory() }
     }
 }
@@ -147,13 +147,23 @@ struct ProfileView: View {
         let user = box.store.user
         Form {
             Section {
-                Text(user?.role ?? "").fontWeight(.semibold)
-                Text("\(appName) \(appVersion)").foregroundStyle(.secondary)
-                if box.store.remoteSession {
-                    Text("Signed in.").foregroundStyle(.secondary)
-                } else {
-                    Text("On this device.").foregroundStyle(.secondary)
+                HStack(spacing: 14) {
+                    IagAvatar(name: user?.name ?? "I", size: 56)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(user?.name ?? "Account")
+                            .font(.headline)
+                        Text(user?.role ?? "")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(IagTheme.leaf)
+                        Text(box.store.remoteSession ? "Signed in to IAG" : "On this device")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("\(appName) \(appVersion)")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
+                .padding(.vertical, 4)
                 if let remote = box.store.lastRemoteError, !remote.isEmpty {
                     Text(remote).foregroundStyle(.red)
                 }
@@ -180,7 +190,7 @@ struct ProfileView: View {
             }
         }
         .iagCanvas()
-        .navigationTitle("Account")
+        .iagBar("Account", subtitle: appName)
         .onAppear {
             name = user?.name ?? ""
             email = user?.email ?? ""

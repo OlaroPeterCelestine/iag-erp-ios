@@ -11,3 +11,4 @@ xcuserdata/
 *.dSYM.zip
 export/
 .idea/
+.vscode/

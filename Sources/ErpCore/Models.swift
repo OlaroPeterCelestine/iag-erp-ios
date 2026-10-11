@@ -1,6 +1,6 @@
 import Foundation
 
-public let appName = "IAG Central"
+public let appName = "ACP Central"
 public let appVersion = "1.0.0"
 
 func erpJsonText(_ j: [String: Any], _ key: String, fallback: String = "") -> String {

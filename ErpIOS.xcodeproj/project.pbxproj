@@ -170,9 +170,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "IAG Central";
+				INFOPLIST_KEY_CFBundleDisplayName = "ACP Central";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "IAG Central uses your location to verify you are on an IAG site or block when you clock in.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ACP Central uses your location to verify you are on an IAG site or block when you clock in.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -235,9 +235,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "IAG Central";
+				INFOPLIST_KEY_CFBundleDisplayName = "ACP Central";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "IAG Central uses your location to verify you are on an IAG site or block when you clock in.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ACP Central uses your location to verify you are on an IAG site or block when you clock in.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -289,6 +289,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		A31D122B87DD29E797CB4427 /* ErpCore */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 1F7F6697A3A819DDF26C9E55 /* XCLocalSwiftPackageReference "." */;
 			productName = ErpCore;
 		};
 /* End XCSwiftPackageProductDependency section */

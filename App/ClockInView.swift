@@ -74,34 +74,73 @@ struct ClockInView: View {
             guard let lat = gps.latitude, let lng = gps.longitude else { return nil }
             return verifyAgainstZones(GeoPoint(latitude: lat, longitude: lng), store.geofenceZones(), accuracyMeters: gps.accuracy)
         }()
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                IagGrouped {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .center, spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill((open == nil ? IagTheme.muted : IagTheme.success).opacity(0.16))
+                                .frame(width: 56, height: 56)
+                            Image(systemName: open == nil ? "moon.zzz.fill" : "checkmark.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(open == nil ? IagTheme.muted : IagTheme.success)
+                        }
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(open == nil ? "Clocked out" : "Clocked in")
-                                .font(.title2.weight(.semibold))
+                            Text(open == nil ? "Clocked out" : "On the clock")
+                                .font(.title3.weight(.semibold))
                             Text(store.user?.name ?? "Staff")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                            if let open {
+                                Text("Since \(recordField(open, "clockIn", "Clock in"))")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("Capture GPS, then clock in at a site.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                        Spacer()
-                        StatusPill(text: open == nil ? "Out" : "In")
+                        Spacer(minLength: 0)
                     }
-                    if let open {
-                        Text("Since \(recordField(open, "clockIn", "Clock in")) · \(open.subtitle)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("Capture GPS, then clock in at a site.")
-                            .font(.caption)
+                    if let check {
+                        VStack(alignment: .leading, spacing: 6) {
+                            StatusPill(text: check.status)
+                            Text(check.note)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Button {
+                        guard let lat = gps.latitude, let lng = gps.longitude else {
+                            message = "Capture GPS first, or use the Head Office demo pin."
+                            return
+                        }
+                        message = store.punch(kind: open == nil ? "in" : "out", latitude: lat, longitude: lng, accuracy: gps.accuracy)
+                    } label: {
+                        Text(open == nil ? "Clock in" : "Clock out")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 48)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(IagTheme.leaf)
+                    .controlSize(.large)
+                    .disabled(!store.canClockIn)
+                    if let message {
+                        Text(message)
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.vertical, 4)
-            }
+                .padding(16)
+                }
 
-            Section("Location") {
+                Text("Location").font(.title3.weight(.bold))
+                IagGrouped {
+                    VStack(alignment: .leading, spacing: 12) {
                 if let lat = gps.latitude, let lng = gps.longitude {
                     LabeledContent("GPS", value: String(format: "%.5f, %.5f", lat, lng))
                     LabeledContent("Accuracy", value: "\(Int(gps.accuracy.rounded())) m")
@@ -111,61 +150,45 @@ struct ClockInView: View {
                 Button(gps.busy ? "Reading GPS…" : "Refresh GPS") { gps.refresh() }
                     .disabled(gps.busy)
                 Button("Use IAG Head Office (demo)") { gps.useHq() }
-                if let check {
-                    StatusPill(text: check.status)
-                    Text(check.note).font(.caption).foregroundStyle(.secondary)
-                }
                 if let err = gps.error {
                     Text(err).foregroundStyle(.red)
                 }
-                if let message {
-                    Text(message).foregroundStyle(.secondary)
-                }
-            }
-
-            Section {
-                Button {
-                    guard let lat = gps.latitude, let lng = gps.longitude else {
-                        message = "Capture GPS first, or use the Head Office demo pin."
-                        return
                     }
-                    message = store.punch(kind: open == nil ? "in" : "out", latitude: lat, longitude: lng, accuracy: gps.accuracy)
-                } label: {
-                    Text(open == nil ? "Clock in" : "Clock out")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
+                    .padding(16)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(IagTheme.orange)
-                .controlSize(.large)
-                .disabled(!store.canClockIn)
-                .listRowBackground(Color.clear)
-            }
 
-            Section("My punches") {
+                Text("My punches").font(.title3.weight(.bold))
                 let punches = store.myPunches()
                 if punches.isEmpty {
-                    Text("No punches yet.").foregroundStyle(.secondary)
+                    IagEmptyHint(text: "No punches yet.", systemName: "clock")
+                        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 } else {
-                    ForEach(punches.prefix(12), id: \.id) { rec in
-                        NavigationLink {
-                            RecordDetailView(recordId: rec.id)
-                        } label: {
-                            DeskRow(
-                                title: rec.title,
-                                subtitle: "\(recordField(rec, "clockIn", "Clock in"))–\(recordField(rec, "clockOut", "Clock out"))",
-                                systemName: "clock",
-                                status: rec.status
-                            )
+                    IagGrouped {
+                        ForEach(Array(punches.prefix(12).enumerated()), id: \.element.id) { index, rec in
+                            NavigationLink {
+                                RecordDetailView(recordId: rec.id)
+                            } label: {
+                                DeskRow(
+                                    title: rec.title,
+                                    subtitle: "\(recordField(rec, "clockIn", "Clock in"))–\(recordField(rec, "clockOut", "Clock out"))",
+                                    systemName: "clock",
+                                    color: IagTheme.leaf,
+                                    status: rec.status
+                                )
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.plain)
+                            if index < min(punches.count, 12) - 1 { IagRowDivider() }
                         }
                     }
                 }
             }
+            .iagPage()
         }
-        .listStyle(.insetGrouped)
-        .iagCanvas()
-        .navigationTitle("Clock In")
+        .scrollIndicators(.hidden)
+        .background(IagTheme.canvas.ignoresSafeArea())
+        .iagBar("Clock In", subtitle: appName)
         .onAppear { gps.refresh() }
         .task {
             await box.store.refreshEntity("payroll", "Sites")

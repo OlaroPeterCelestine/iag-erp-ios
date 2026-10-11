@@ -101,18 +101,19 @@ struct LoginView: View {
                         .font(.body.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
-                .frame(minHeight: 48)
+                .frame(minHeight: 52)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            .background(LoginPalette.ink, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(IagTheme.leaf, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .disabled(busy)
             .opacity(busy ? 0.72 : 1)
             .padding(.top, 8)
-            Text("On this phone, Sign in with admin / ChangeMe. Live IAG needs your web ERP password.")
+            Text("On this phone, sign in with admin / ChangeMe. Live IAG needs your web ERP password.")
                 .font(.caption)
                 .foregroundStyle(LoginPalette.muted)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 4)
             Button("Continue on this device") {
@@ -124,8 +125,13 @@ struct LoginView: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(LoginPalette.ink)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 44)
-            .padding(.top, 4)
+            .frame(minHeight: 48)
+            .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(LoginPalette.line, lineWidth: 1)
+            )
+            .padding(.top, 2)
         }
     }
 
@@ -270,7 +276,7 @@ struct ResetPasswordView: View {
                 }
                 .disabled(busy)
             }
-            .navigationTitle("Reset password")
+            .iagBar("Reset password")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

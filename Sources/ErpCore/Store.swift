@@ -1047,9 +1047,9 @@ public final class ErpStore {
     }
 
     @discardableResult
-    public func rejectRecordAsync(_ record: ErpRecord, comment: String = "Rejected from IAG Central.") async -> String? {
+    public func rejectRecordAsync(_ record: ErpRecord, comment: String = "Rejected from ACP Central.") async -> String? {
         if let err = approvalGate(record) { return err }
-        let reason = comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Rejected from IAG Central." : comment
+        let reason = comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Rejected from ACP Central." : comment
         if let api, remoteSession {
             if ErpAPI.isChainEntity(record.entity) {
                 switch await api.approvalAction(entity: apiEntityKey(record.entity), id: record.id, action: "reject", comment: reason) {

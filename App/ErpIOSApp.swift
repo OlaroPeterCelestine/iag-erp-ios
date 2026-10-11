@@ -6,11 +6,26 @@ import ErpCore
 struct ErpIOSApp: App {
     @StateObject private var box = StoreBox()
 
+    init() {
+        let canvas = UIColor { trait in
+            trait.userInterfaceStyle == .dark
+                ? UIColor(red: 0.07, green: 0.09, blue: 0.08, alpha: 1)
+                : UIColor(red: 244 / 255, green: 247 / 255, blue: 245 / 255, alpha: 1)
+        }
+        let card = UIColor { trait in
+            trait.userInterfaceStyle == .dark ? .secondarySystemGroupedBackground : .white
+        }
+        UITableView.appearance().backgroundColor = canvas
+        UICollectionView.appearance().backgroundColor = canvas
+        UITableViewCell.appearance().backgroundColor = card
+        UICollectionViewCell.appearance().backgroundColor = card
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(box)
-                .tint(IagTheme.orange)
+                .tint(IagTheme.leaf)
         }
     }
 }
@@ -86,8 +101,15 @@ enum IagTheme {
     static let orangeDeep = Color(red: 194 / 255, green: 78 / 255, blue: 16 / 255)
     static let ink = Color(red: 17 / 255, green: 17 / 255, blue: 19 / 255)
     static let success = Color(red: 22 / 255, green: 128 / 255, blue: 92 / 255)
-    static let canvas = Color(.systemGroupedBackground)
-    static let card = Color(.secondarySystemGroupedBackground)
+    static let leaf = Color(red: 23 / 255, green: 122 / 255, blue: 74 / 255)
+    static let canvas = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.07, green: 0.09, blue: 0.08, alpha: 1)
+            : UIColor(red: 244 / 255, green: 247 / 255, blue: 245 / 255, alpha: 1)
+    })
+    static let card = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark ? .secondarySystemGroupedBackground : .white
+    })
     static let hairline = Color.primary.opacity(0.08)
     static let muted = Color.secondary
     static let radius: CGFloat = 16
@@ -119,7 +141,7 @@ func statusColor(_ status: String) -> Color {
         return Color.red
     }
     if ["pending", "open", "draft", "held", "flagged", "submitted"].contains(where: { s.contains($0) }) {
-        return IagTheme.orange
+        return IagTheme.leaf
     }
     return IagTheme.muted
 }
@@ -154,16 +176,33 @@ struct IagMark: View {
 
 struct IagIconWell: View {
     var systemName: String
-    var color: Color = IagTheme.ink
+    var color: Color = IagTheme.leaf
+    var size: CGFloat = 40
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: IagTheme.radiusSm, style: .continuous)
-                .fill(Color.primary.opacity(0.05))
+            Circle().fill(color.opacity(0.14))
             Image(systemName: systemName)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(color.opacity(0.9))
+                .font(.system(size: size * 0.4, weight: .semibold))
+                .foregroundStyle(color)
+                .symbolRenderingMode(.hierarchical)
         }
-        .frame(width: 38, height: 38)
+        .frame(width: size, height: size)
+    }
+}
+
+struct IagAvatar: View {
+    var name: String
+    var size: CGFloat = 52
+    var body: some View {
+        let letter = name.trimmingCharacters(in: .whitespacesAndNewlines).first.map { String($0).uppercased() } ?? "I"
+        ZStack {
+            Circle().fill(IagTheme.leaf.opacity(0.16))
+            Text(letter)
+                .font(.system(size: size * 0.36, weight: .semibold))
+                .foregroundStyle(IagTheme.leaf)
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
     }
 }
 
@@ -213,15 +252,13 @@ struct IagSectionHeader: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.6)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.primary)
             Spacer()
             if let accessory {
                 Text(accessory)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(IagTheme.orange)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(IagTheme.leaf)
             }
         }
     }
@@ -229,12 +266,20 @@ struct IagSectionHeader: View {
 
 struct IagEmptyHint: View {
     var text: String
+    var systemName: String = "magnifyingglass"
     var body: some View {
-        Text(text)
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(18)
+        VStack(spacing: 10) {
+            Image(systemName: systemName)
+                .font(.title3)
+                .foregroundStyle(.tertiary)
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 22)
+        .padding(.horizontal, 18)
     }
 }
 
@@ -242,11 +287,8 @@ struct IagGrouped<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
         VStack(spacing: 0) { content }
-            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
-                    .stroke(IagTheme.hairline, lineWidth: 1)
-            )
+            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .shadow(color: Color.black.opacity(0.05), radius: 12, y: 4)
     }
 }
 
@@ -263,24 +305,25 @@ struct AppTile: View {
     let app: SuiteApp
     var subtitle: String? = nil
 
+    private var tint: Color { iagColor(app.color) }
+
     var body: some View {
-        VStack(spacing: 10) {
-            RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
-                .fill(IagTheme.card)
-                .frame(height: 64)
-                .overlay {
-                    Image(systemName: app.icon)
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundStyle(IagTheme.ink)
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
-                        .stroke(IagTheme.hairline, lineWidth: 1)
-                )
+        VStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(tint.opacity(0.14))
+                Image(systemName: app.icon)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .symbolRenderingMode(.hierarchical)
+            }
+            .frame(height: 72)
             Text(app.label)
-                .font(.caption.weight(.medium))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(.primary)
-                .lineLimit(1)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
             if let subtitle {
                 Text(subtitle)
                     .font(.caption2)
@@ -296,29 +339,28 @@ struct QuickActionButton: View {
     let action: QuickAction
     var badge: Int = 0
 
+    private var tint: Color { iagColor(action.color) }
+
     var body: some View {
         VStack(spacing: 8) {
             ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: IagTheme.radiusSm, style: .continuous)
-                    .fill(IagTheme.card)
-                    .frame(width: 54, height: 54)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(tint.opacity(0.14))
+                    .frame(width: 56, height: 56)
                     .overlay {
                         Image(systemName: action.icon)
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundStyle(IagTheme.ink)
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(tint)
+                            .symbolRenderingMode(.hierarchical)
                     }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: IagTheme.radiusSm, style: .continuous)
-                            .stroke(IagTheme.hairline, lineWidth: 1)
-                    )
                 if badge > 0 {
                     Text(badge > 9 ? "9+" : "\(badge)")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(IagTheme.orange, in: Capsule())
-                        .offset(x: 6, y: -4)
+                        .background(IagTheme.leaf, in: Capsule())
+                        .offset(x: 8, y: -6)
                 }
             }
             Text(action.label)
@@ -335,33 +377,33 @@ struct TodayActionCard: View {
     let action: QuickAction
     var badge: Int = 0
 
+    private var tint: Color { iagColor(action.color) }
+
     var body: some View {
-        VStack(spacing: 10) {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: action.icon)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(IagTheme.ink)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                IagIconWell(systemName: action.icon, color: tint, size: 40)
+                Spacer()
                 if badge > 0 {
                     Text(badge > 9 ? "9+" : "\(badge)")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.caption2.weight(.bold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(IagTheme.orange, in: Capsule())
-                        .offset(x: 14, y: -10)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(IagTheme.leaf, in: Capsule())
                 }
             }
             Text(action.label)
-                .font(.caption.weight(.medium))
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
         .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
-                .stroke(IagTheme.hairline, lineWidth: 1)
+                .stroke(tint.opacity(0.22), lineWidth: 1)
         )
     }
 }
@@ -369,21 +411,28 @@ struct TodayActionCard: View {
 struct KpiChip: View {
     let kpi: Kpi
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(kpi.label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(kpi.value)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.primary)
-            Text(kpi.hint)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
+        VStack(alignment: .leading, spacing: 0) {
+            Rectangle()
+                .fill(IagTheme.leaf)
+                .frame(height: 3)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(kpi.label)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Text(kpi.value)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+                Text(kpi.hint)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+            .padding(14)
         }
-        .padding(16)
-        .frame(minWidth: 140, alignment: .leading)
+        .frame(minWidth: 148, alignment: .leading)
         .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
                 .stroke(IagTheme.hairline, lineWidth: 1)
@@ -397,21 +446,24 @@ struct WelcomeCard: View {
     var stats: [WelcomeStat]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(iagGreeting().uppercased())
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .tracking(1.1)
-                Text(name)
-                    .font(.system(size: 34, weight: .semibold, design: .default))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .center, spacing: 14) {
+                IagAvatar(name: name)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(iagGreeting())
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text(name)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text(subtitle)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(IagTheme.leaf)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
             }
             if !stats.isEmpty {
                 HStack(spacing: 0) {
@@ -419,8 +471,9 @@ struct WelcomeCard: View {
                         let hot = stat.id == "todo" && stat.value != "0"
                         VStack(alignment: .leading, spacing: 4) {
                             Text(stat.value)
-                                .font(.title2.weight(.semibold))
-                                .foregroundStyle(hot ? IagTheme.orange : .primary)
+                                .font(.title3.weight(.semibold))
+                                .monospacedDigit()
+                                .foregroundStyle(hot ? IagTheme.leaf : .primary)
                             Text(stat.label)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -429,20 +482,22 @@ struct WelcomeCard: View {
                         if index < stats.count - 1 {
                             Rectangle()
                                 .fill(IagTheme.hairline)
-                                .frame(width: 1, height: 36)
+                                .frame(width: 1, height: 32)
                                 .padding(.horizontal, 8)
                         }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-                .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
-                        .stroke(IagTheme.hairline, lineWidth: 1)
-                )
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+                .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: IagTheme.radiusSm, style: .continuous))
             }
         }
+        .padding(16)
+        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: IagTheme.radius, style: .continuous)
+                .stroke(IagTheme.hairline, lineWidth: 1)
+        )
     }
 }
 
@@ -462,11 +517,54 @@ struct GreetingHeader: View {
     }
 }
 
+struct IagPageTitle: View {
+    var title: String
+    var subtitle: String? = nil
+
+    var body: some View {
+        VStack(spacing: 1) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+            if let subtitle, !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
 extension View {
+    /// Pins the page name on the navigation bar, with an optional context line under it.
+    func iagBar(_ title: String, subtitle: String? = nil) -> some View {
+        self
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(IagTheme.card, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    IagPageTitle(title: title, subtitle: subtitle)
+                }
+            }
+    }
+
     func iagCanvas() -> some View {
         self
             .scrollContentBackground(.hidden)
             .background(IagTheme.canvas.ignoresSafeArea())
+            .tint(IagTheme.leaf)
+    }
+
+    func iagPage() -> some View {
+        self
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 28)
     }
 
     func iagCard() -> some View {

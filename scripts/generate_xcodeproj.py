@@ -256,8 +256,8 @@ pbx = f"""// !$*UTF8*$!
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "IAG Central";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "IAG Central uses your location to verify you are on an IAG site or block when you clock in.";
+				INFOPLIST_KEY_CFBundleDisplayName = "ACP Central";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ACP Central uses your location to verify you are on an IAG site or block when you clock in.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
@@ -285,8 +285,8 @@ pbx = f"""// !$*UTF8*$!
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "IAG Central";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "IAG Central uses your location to verify you are on an IAG site or block when you clock in.";
+				INFOPLIST_KEY_CFBundleDisplayName = "ACP Central";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ACP Central uses your location to verify you are on an IAG site or block when you clock in.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
@@ -337,6 +337,7 @@ pbx = f"""// !$*UTF8*$!
 /* Begin XCSwiftPackageProductDependency section */
 		{pkg_product} /* ErpCore */ = {{
 			isa = XCSwiftPackageProductDependency;
+			package = {pkg_ref} /* XCLocalSwiftPackageReference "." */;
 			productName = ErpCore;
 		}};
 /* End XCSwiftPackageProductDependency section */
