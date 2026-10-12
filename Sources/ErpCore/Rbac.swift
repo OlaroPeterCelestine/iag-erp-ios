@@ -415,8 +415,12 @@ public func canAccessSpecialNav(_ role: String?, _ key: String, definition: Role
     if let granted = pages[key] { return granted.view }
     let crud = crudForRole(role, definition: definition)
     switch key {
-    case "dashboard", "trace", "clock-in", "guides", "qna", "release-notes", "templates", "comms", "accounting-documents", "payment-requests":
+    case "dashboard", "trace", "clock-in", "guides", "qna", "release-notes", "templates", "comms", "payment-requests":
         return crud.view
+    case "accounting-documents":
+        return roleMaySeeModule(role, "accounts", definition: definition)
+            || roleMaySeeModule(role, "banking", definition: definition)
+            || roleMaySeeModule(role, "reports", definition: definition)
     default:
         return false
     }

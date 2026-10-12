@@ -47,10 +47,21 @@ public final class ErpStore {
     public var isAdmin: Bool { isAdminRole(roleName) }
     public var currentRole: RoleDefinition? { roleOf(roleName) }
     public var kpis: [Kpi] {
-        guard let id = activeAppId else { return defaultKpis }
-        return kpisForApp(id, records: records)
+        if let id = activeAppId { return kpisForApp(id, records: records) }
+        if isAdmin { return defaultKpis }
+        if let home = defaultSuiteAppForRole(roleName), canOpenSuiteApp(roleName, home, definition: currentRole) {
+            return kpisForApp(home, records: records)
+        }
+        let scoped = records.filter { canOpen($0.moduleId) }
+        let open = scoped.filter { isOpenStatus($0.status) }.count
+        return [
+            Kpi(label: "Records", value: "\(scoped.count)", hint: "Your department"),
+            Kpi(label: "Open", value: "\(open)", hint: "Waiting"),
+            Kpi(label: "Desks", value: "\(visibleModules.count)", hint: "You can open"),
+            Kpi(label: "Apps", value: "\(visibleSuiteApps.count)", hint: "Systems"),
+        ]
     }
-    public var visibleModules: [ErpModule] { modules.filter { canAccessModule(roleName, $0.id, definition: currentRole) } }
+    public var visibleModules: [ErpModule] { modules.filter { roleMaySeeModule(roleName, $0.id, definition: currentRole) } }
     public var visibleSuiteApps: [SuiteApp] {
         suiteApps.filter { canOpenSuiteApp(roleName, $0.id, definition: currentRole) }
     }
@@ -72,7 +83,14 @@ public final class ErpStore {
     public var canClockIn: Bool { user != nil && crudForRole(roleName, definition: currentRole).view }
     public var customRoles: [RoleDefinition] { roles.filter { !$0.system } }
     public var pendingApprovals: [ErpRecord] { pendingApprovalsFor(nil) }
-    public var recent: [ErpRecord] { Array(records.prefix(8)) }
+    public var recent: [ErpRecord] {
+        let scoped = records.filter { rec in
+            guard canOpen(rec.moduleId) else { return false }
+            if let app = activeSuiteApp { return app.moduleIds.contains(rec.moduleId) }
+            return true
+        }
+        return Array(scoped.prefix(8))
+    }
     public var accountingDocuments: [ErpRecord] {
         let needles = ["invoice", "quote", "order", "note", "receipt", "payment", "payslip", "journal", "transfer", "claim", "request"]
         return records.filter { rec in
@@ -222,6 +240,18 @@ public final class ErpStore {
         return blocks + sites
     }
 
+    public func publicHolidays(year: Int) -> [CompanyHoliday] {
+        var byDate: [String: CompanyHoliday] = [:]
+        for holiday in ugandaPublicHolidays(year: year) {
+            byDate[holiday.date] = holiday
+        }
+        for rec in forEntity("payroll", "Holidays") where rec.date.hasPrefix(String(year)) {
+            let name = rec.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !name.isEmpty { byDate[rec.date] = CompanyHoliday(date: rec.date, name: name) }
+        }
+        return byDate.values.sorted { $0.date < $1.date }
+    }
+
     public func myPunches() -> [ErpRecord] {
         let name = (user?.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         return forEntity("payroll", "Attendance").filter { recordField($0, "employee", "Employee") == name || $0.subtitle.contains(name) || $0.title.contains(name) }
@@ -316,7 +346,7 @@ public final class ErpStore {
     private func notify() { listeners.forEach { $0() } }
 
     public func roleOf(_ name: String?) -> RoleDefinition? { findRoleDefinition(roles, name) }
-    public func canOpen(_ moduleId: String) -> Bool { canAccessModule(roleName, moduleId, definition: currentRole) }
+    public func canOpen(_ moduleId: String) -> Bool { roleMaySeeModule(roleName, moduleId, definition: currentRole) }
     public func canCreate(_ moduleId: String, _ entity: String? = nil) -> Bool {
         if let entity { return canCreateEntity(roleName, moduleId, entity, definition: currentRole) }
         return canCreateIn(roleName, moduleId, definition: currentRole)
@@ -377,7 +407,7 @@ public final class ErpStore {
     public func pendingApprovalsFor(_ moduleId: String?) -> [ErpRecord] {
         let rows = moduleId == nil ? records : forModule(moduleId!)
         let def = currentRole
-        return rows.filter { approvalEntities.contains($0.entity) && isOpenStatus($0.status) && canAccessModule(roleName, $0.moduleId, definition: def) }
+        return rows.filter { approvalEntities.contains($0.entity) && isOpenStatus($0.status) && roleMaySeeModule(roleName, $0.moduleId, definition: def) }
     }
 
     public func filtered(_ moduleId: String, _ entity: String) -> [ErpRecord] {

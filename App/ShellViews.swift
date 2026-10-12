@@ -49,9 +49,7 @@ struct ShellView: View {
             }
         case "desks":
             DepartmentsView()
-        case "clock":
-            NavigationStack { ClockInView() }
-        case "calendar":
+        case "attendance", "clock", "calendar":
             NavigationStack { AttendanceCalendarView() }
         case "approvals":
             ApprovalsView()
@@ -82,8 +80,6 @@ struct FinHome: View {
     var apps: [SuiteApp]
     var recents: [ErpRecord]
     var pending: [ErpRecord]
-    var hits: [SearchHit]
-    @Binding var query: String
     var onOpenApp: (String) -> Void
     var onLeaveApp: (() -> Void)?
     var viewAllTab: String = "desks"
@@ -91,25 +87,15 @@ struct FinHome: View {
     var viewAllModule: String? = nil
     var viewAllDesks: Bool = false
 
-    @State private var searching = false
-
     private var frequentApps: [SuiteApp] { Array(apps.prefix(8)) }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
-                utilityApps
-                if searching {
-                    searchField
-                }
-                if searching && query.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 {
-                    searchResults
-                } else if !searching {
-                    welcomeCard
-                    if !actions.isEmpty || !frequentApps.isEmpty || !recents.isEmpty { quickActions }
-                    if !pending.isEmpty { waiting }
-                }
+                welcomeCard
+                if !actions.isEmpty || !frequentApps.isEmpty || !recents.isEmpty { quickActions }
+                if !pending.isEmpty { waiting }
             }
             .padding(.horizontal, 20)
             .padding(.top, 4)
@@ -178,99 +164,6 @@ struct FinHome: View {
                     .padding(.vertical, 1)
                     .background(IagTheme.leaf, in: Capsule())
                     .offset(x: 6, y: -4)
-            }
-        }
-    }
-
-    private var utilityApps: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Button {
-                searching.toggle()
-                if !searching { query = "" }
-            } label: {
-                utilityApp(title: "Search", systemName: "magnifyingglass", color: Color(red: 0.34, green: 0.33, blue: 0.31))
-            }
-            .buttonStyle(.plain)
-            Spacer(minLength: 0)
-        }
-    }
-
-    private func utilityApp(title: String, systemName: String, color: Color, badge: Int = 0) -> some View {
-        VStack(spacing: 8) {
-            ZStack(alignment: .topTrailing) {
-                Circle()
-                    .fill(color.opacity(0.12))
-                    .frame(width: 52, height: 52)
-                Image(systemName: systemName)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(color)
-                    .frame(width: 52, height: 52)
-                if badge > 0 {
-                    Text(badge > 9 ? "9+" : "\(badge)")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(IagTheme.onLeaf)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(IagTheme.leaf, in: Capsule())
-                        .offset(x: 6, y: -4)
-                }
-            }
-            Text(title)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .frame(width: 76)
-        }
-    }
-
-    private var searchField: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-            TextField("Search desks and records", text: $query)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 14)
-        .frame(minHeight: 46)
-        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .finShadow()
-    }
-
-    private var searchResults: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Results")
-                .font(.subheadline.weight(.semibold))
-            if hits.isEmpty {
-                Text("No matches in desks, features, or records.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(18)
-                    .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .finShadow()
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(hits.enumerated()), id: \.element.id) { index, hit in
-                        SearchHitRow(hit: hit)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                        if index < hits.count - 1 {
-                            Divider().padding(.leading, 66)
-                        }
-                    }
-                }
-                .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .finShadow()
             }
         }
     }
@@ -580,7 +473,6 @@ private extension View {
 
 struct HomeView: View {
     @EnvironmentObject var box: StoreBox
-    @State private var query = ""
 
     var body: some View {
         let store = box.store
@@ -601,11 +493,9 @@ struct HomeView: View {
                     store.canOpen(rec.moduleId) && (store.activeSuiteApp?.moduleIds.contains(rec.moduleId) ?? true)
                 }.prefix(6)),
                 pending: Array(store.appPendingApprovals.prefix(3)),
-                hits: store.searchHits(query),
-                query: $query,
                 onOpenApp: { store.openApp($0) },
                 onLeaveApp: { store.closeApp() },
-                viewAllTab: shellTabs(appId: store.activeAppId, role: store.roleName, canApprove: store.canApprove, canClockIn: store.canClockIn).first { !["home", "approvals", "clock", "calendar"].contains($0.id) }?.id ?? "desks",
+                viewAllTab: shellTabs(appId: store.activeAppId, role: store.roleName, canApprove: store.canApprove, canClockIn: store.canClockIn).first { !["home", "approvals", "attendance", "clock", "calendar"].contains($0.id) }?.id ?? "desks",
                 toolsTitle: store.activeSuiteApp?.label ?? "Quick actions",
                 viewAllModule: store.departmentTools.isEmpty || store.appModules.count != 1 ? nil : store.appModules.first?.id,
                 viewAllDesks: !store.departmentTools.isEmpty && store.appModules.count > 1
@@ -915,7 +805,6 @@ struct MoreView: View {
 
 struct AppsLauncherView: View {
     @EnvironmentObject var box: StoreBox
-    @State private var query = ""
 
     var body: some View {
         let store = box.store
@@ -934,8 +823,6 @@ struct AppsLauncherView: View {
                 apps: store.visibleSuiteApps,
                 recents: [],
                 pending: Array(store.pendingApprovals.prefix(3)),
-                hits: store.searchHits(query),
-                query: $query,
                 onOpenApp: { store.openApp($0) },
                 onLeaveApp: nil
             )

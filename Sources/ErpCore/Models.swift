@@ -231,6 +231,36 @@ public func formatMoney(_ amount: Double) -> String {
     return "\(amount < 0 ? "-" : "")UGX \(body)"
 }
 
+public struct CompanyHoliday: Equatable, Identifiable, Sendable {
+    public var date: String
+    public var name: String
+    public var id: String { date }
+}
+
+public func ugandaPublicHolidays(year: Int) -> [CompanyHoliday] {
+    var days: [(String, String)] = [
+        ("01-01", "New Year's Day"),
+        ("01-26", "NRM Liberation Day"),
+        ("02-16", "Janani Luwum Day"),
+        ("03-08", "International Women's Day"),
+        ("05-01", "Labour Day"),
+        ("06-03", "Uganda Martyrs' Day"),
+        ("06-09", "National Heroes' Day"),
+        ("10-09", "Independence Day"),
+        ("12-25", "Christmas Day"),
+        ("12-26", "Boxing Day"),
+    ]
+    if year == 2026 {
+        days.append(contentsOf: [
+            ("03-20", "Eid al-Fitr"),
+            ("04-03", "Good Friday"),
+            ("04-06", "Easter Monday"),
+            ("05-27", "Eid al-Adha"),
+        ])
+    }
+    return days.map { CompanyHoliday(date: String(format: "%04d-%@", year, $0.0), name: $0.1) }.sorted { $0.date < $1.date }
+}
+
 public func todayIsoDate() -> String {
     let c = Calendar.current
     let d = Date()
@@ -311,8 +341,32 @@ public func suiteAppContaining(_ moduleId: String) -> SuiteApp? {
     suiteApps.first { $0.moduleIds.contains(moduleId) }
 }
 
+/// Built-in roles only open their own department. Nil means the role is not department-locked
+/// (administrators, and custom roles that use the page matrix).
+public func roleDepartmentApps(_ role: String?, definition: RoleDefinition? = nil) -> Set<String>? {
+    if isAdminRole(role) || isAdminRole(definition?.name) { return nil }
+    if let definition, !definition.system { return nil }
+    if isContractorRole(role) { return ["projects", "contracts"] }
+    switch normalizeRole(role) {
+    case "quantity surveyor", "project manager": return ["projects"]
+    case "procurement", "stores manager": return ["procurement"]
+    case "hr", "human resources", "department head": return ["hr"]
+    case "accountant", "accounts assistant", "accounts", "finance", "clerk", "viewer": return ["finance"]
+    case "general manager", "ceo", "reviewer", "approver": return ["requests"]
+    default: return nil
+    }
+}
+
+public func roleMaySeeModule(_ role: String?, _ moduleId: String, definition: RoleDefinition? = nil) -> Bool {
+    guard canAccessModule(role, moduleId, definition: definition) else { return false }
+    if moduleId == "clock-in" { return true }
+    guard let apps = roleDepartmentApps(role, definition: definition) else { return true }
+    return apps.contains { suiteAppById($0)?.moduleIds.contains(moduleId) == true }
+}
+
 public func canOpenSuiteApp(_ role: String?, _ appId: String, definition: RoleDefinition? = nil) -> Bool {
     guard let app = suiteAppById(appId) else { return false }
+    if let apps = roleDepartmentApps(role, definition: definition), !apps.contains(app.id) { return false }
     return app.moduleIds.contains { canAccessModule(role, $0, definition: definition) }
 }
 
@@ -349,8 +403,7 @@ public func shellTabs(appId: String?, role: String?, canApprove: Bool, canClockI
         tabs.append(ShellTabSpec(id: "desks", label: "Desks", icon: "building.2"))
     }
     if canClockIn {
-        tabs.append(ShellTabSpec(id: "clock", label: "Clock", icon: "clock"))
-        tabs.append(ShellTabSpec(id: "calendar", label: "Calendar", icon: "calendar"))
+        tabs.append(ShellTabSpec(id: "attendance", label: "Attendance", icon: "calendar.badge.clock"))
     }
     if canApprove, tabs.count < 5, appId == nil || appHasApprovals(appId ?? "") {
         tabs.append(ShellTabSpec(id: "approvals", label: "Approvals", icon: "checkmark.rectangle"))
@@ -620,9 +673,9 @@ public func defaultSuiteAppForRole(_ role: String?) -> String? {
     switch normalizeRole(role) {
     case "quantity surveyor", "project manager": return "projects"
     case "procurement", "stores manager": return "procurement"
-    case "hr", "human resources": return "hr"
-    case "accountant", "accounts assistant", "accounts", "finance", "clerk": return "finance"
-    case "viewer": return "finance"
+    case "hr", "human resources", "department head": return "hr"
+    case "accountant", "accounts assistant", "accounts", "finance", "clerk", "viewer": return "finance"
+    case "general manager", "ceo", "reviewer", "approver": return "requests"
     default: return nil
     }
 }

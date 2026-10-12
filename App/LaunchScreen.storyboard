@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="23504" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="Launch-VC">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23506"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <scene sceneID="Launch-Scene">
+            <objects>
+                <viewController id="Launch-VC" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="Launch-Root">
+                        <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="IagLogo" translatesAutoresizingMaskIntoConstraints="NO" id="Launch-Logo">
+                                <rect key="frame" x="55" y="333" width="283" height="203"/>
+                            </imageView>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="Launch-Safe"/>
+                        <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="Launch-Logo" firstAttribute="centerX" secondItem="Launch-Root" secondAttribute="centerX" id="logo-cx"/>
+                            <constraint firstItem="Launch-Logo" firstAttribute="centerY" secondItem="Launch-Root" secondAttribute="centerY" id="logo-cy"/>
+                            <constraint firstItem="Launch-Logo" firstAttribute="width" secondItem="Launch-Logo" secondAttribute="height" multiplier="2500:1795" id="logo-aspect"/>
+                            <constraint firstItem="Launch-Logo" firstAttribute="width" relation="lessThanOrEqual" secondItem="Launch-Safe" secondAttribute="width" constant="-48" id="logo-max-w"/>
+                            <constraint firstItem="Launch-Logo" firstAttribute="height" relation="lessThanOrEqual" secondItem="Launch-Safe" secondAttribute="height" constant="-48" id="logo-max-h"/>
+                            <constraint firstItem="Launch-Logo" firstAttribute="width" secondItem="Launch-Safe" secondAttribute="width" multiplier="0.72" priority="750" id="logo-pref-w"/>
+                        </constraints>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="Launch-FR" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="53" y="375"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="IagLogo" width="2500" height="1795"/>
+    </resources>
+</document>

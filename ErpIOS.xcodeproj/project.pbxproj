@@ -10,6 +10,7 @@
 		1CB61EFA8150446E28595406 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF5858A0E0E2201B92DA6CCC /* LoginView.swift */; };
 		2613A130BA2E4F11EDA8854F /* ClockInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58956FD1C4B58BA408AE14E8 /* ClockInView.swift */; };
 		2A8EB5D3376C791DADAC7B16 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9C0AAAAA1245D07FC1AF5570 /* Assets.xcassets */; };
+		9B7E2D14A6C83F05E1B9A2D8 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F3C8A91E6B4D2A7058E1C4D7 /* LaunchScreen.storyboard */; };
 		5C621F36A0216493F8BF9CD7 /* RecordViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80D09DE96D5972A468BA6F9D /* RecordViews.swift */; };
 		8B4334446378D9AC4B14D5E4 /* ShellViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E2ADCDC13D7DD79363738B /* ShellViews.swift */; };
 		9529B5B37184624524358A00 /* AccessViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBA6FA9546C6E82C9C58545 /* AccessViews.swift */; };
@@ -26,6 +27,7 @@
 		9C0AAAAA1245D07FC1AF5570 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AF5858A0E0E2201B92DA6CCC /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		B7E2F1A09C4D81E6A2B05C31 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F3C8A91E6B4D2A7058E1C4D7 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		D957E19B16B69713B7749A90 /* ERP iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ERP iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -67,6 +69,7 @@
 				80D09DE96D5972A468BA6F9D /* RecordViews.swift */,
 				8EBA6FA9546C6E82C9C58545 /* AccessViews.swift */,
 				9C0AAAAA1245D07FC1AF5570 /* Assets.xcassets */,
+				F3C8A91E6B4D2A7058E1C4D7 /* LaunchScreen.storyboard */,
 				B7E2F1A09C4D81E6A2B05C31 /* Info.plist */,
 			);
 			path = App;
@@ -137,6 +140,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2A8EB5D3376C791DADAC7B16 /* Assets.xcassets in Resources */,
+				9B7E2D14A6C83F05E1B9A2D8 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
