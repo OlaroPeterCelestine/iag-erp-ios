@@ -89,6 +89,7 @@ struct FinHome: View {
     var pending: [ErpRecord]
     var onOpenApp: (String) -> Void
     var onLeaveApp: (() -> Void)?
+    var currentAppId: String? = nil
     var viewAllTab: String = "desks"
     var toolsTitle: String = "Quick actions"
     var viewAllModule: String? = nil
@@ -101,7 +102,8 @@ struct FinHome: View {
             VStack(alignment: .leading, spacing: 16) {
                 header
                 welcomeCard
-                if !actions.isEmpty || !frequentApps.isEmpty || !recents.isEmpty { quickActions }
+                if !frequentApps.isEmpty { overallErp }
+                if !actions.isEmpty || !recents.isEmpty { quickActions }
                 if !pending.isEmpty { waiting }
             }
             .padding(.horizontal, 20)
@@ -287,7 +289,7 @@ struct FinHome: View {
                     }
                 }
             }
-            if !frequentApps.isEmpty || !recents.isEmpty {
+            if !recents.isEmpty {
                 if !actions.isEmpty {
                     Rectangle()
                         .fill(IagTheme.hairline)
@@ -355,41 +357,67 @@ struct FinHome: View {
         }
     }
 
-    private var frequents: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(frequentApps.isEmpty ? "Jump back" : "Systems")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-            if !frequentApps.isEmpty {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 14) {
-                    ForEach(frequentApps) { app in
-                        Button {
-                            onOpenApp(app.id)
-                            shellTab.wrappedValue = "home"
-                        } label: {
-                            VStack(spacing: 8) {
-                                ZStack {
-                                    Circle()
-                                        .fill(iagColor(app.color).opacity(0.1))
-                                        .frame(width: 40, height: 40)
-                                    Image(systemName: app.icon)
-                                        .font(.system(size: 15, weight: .medium))
-                                        .foregroundStyle(iagColor(app.color))
-                                }
-                                Text(app.label)
-                                    .font(.caption2.weight(.medium))
-                                    .foregroundStyle(.primary)
-                                    .multilineTextAlignment(.center)
-                                    .lineLimit(2)
-                                    .minimumScaleFactor(0.8)
-                                    .frame(height: 28)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
+    private var overallErp: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("ERP")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                if let onLeaveApp {
+                    Button("Overview", action: onLeaveApp)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(IagTheme.leaf)
                         .buttonStyle(.plain)
-                    }
                 }
             }
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 14) {
+                ForEach(frequentApps) { app in
+                    Button {
+                        onOpenApp(app.id)
+                        shellTab.wrappedValue = "home"
+                    } label: {
+                        VStack(spacing: 8) {
+                            ZStack {
+                                Circle()
+                                    .fill(iagColor(app.color).opacity(0.1))
+                                    .frame(width: 40, height: 40)
+                                    .overlay {
+                                        if app.id == currentAppId {
+                                            Circle().stroke(iagColor(app.color), lineWidth: 1.5)
+                                        }
+                                    }
+                                Image(systemName: app.icon)
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(iagColor(app.color))
+                            }
+                            Text(app.label)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.8)
+                                .frame(height: 28)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(app.id == currentAppId ? "\(app.label), current department" : app.label)
+                }
+            }
+        }
+        .padding(12)
+        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(IagTheme.hairline, lineWidth: 0.5)
+        )
+    }
+
+    private var frequents: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Jump back")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
             if !recents.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
@@ -501,13 +529,14 @@ struct HomeView: View {
                 approvalCount: store.appPendingApprovals.count,
                 noticeCount: store.appNotices.count,
                 kpis: store.kpis,
-                apps: [],
+                apps: store.visibleSuiteApps,
                 recents: Array(store.recent.filter { rec in
                     store.canOpen(rec.moduleId) && (store.activeSuiteApp?.moduleIds.contains(rec.moduleId) ?? true)
                 }.prefix(6)),
                 pending: Array(store.appPendingApprovals.prefix(3)),
                 onOpenApp: { store.openApp($0) },
                 onLeaveApp: { store.closeApp() },
+                currentAppId: store.activeAppId,
                 viewAllTab: shellTabs(appId: store.activeAppId, role: store.roleName, canApprove: store.canApprove, canClockIn: store.canClockIn).first { !["home", "approvals", "attendance", "clock", "calendar"].contains($0.id) }?.id ?? "desks",
                 toolsTitle: store.activeSuiteApp?.label ?? "Quick actions",
                 viewAllModule: store.departmentTools.isEmpty || store.appModules.count != 1 ? nil : store.appModules.first?.id,
