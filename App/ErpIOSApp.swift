@@ -1,12 +1,15 @@
 import SwiftUI
-import UIKit
 import ErpCore
+#if canImport(UIKit)
+import UIKit
+#endif
 
 @main
 struct ErpIOSApp: App {
     @StateObject private var box = StoreBox()
 
     init() {
+        #if canImport(UIKit)
         let canvas = UIColor { trait in
             trait.userInterfaceStyle == .dark
                 ? UIColor(red: 0.07, green: 0.07, blue: 0.08, alpha: 1)
@@ -21,6 +24,7 @@ struct ErpIOSApp: App {
         UICollectionView.appearance().backgroundColor = canvas
         UITableViewCell.appearance().backgroundColor = card
         UICollectionViewCell.appearance().backgroundColor = card
+        #endif
     }
 
     var body: some Scene {
@@ -72,34 +76,30 @@ enum IagTheme {
     static let orangeDeep = Color(red: 194 / 255, green: 78 / 255, blue: 16 / 255)
     static let ink = Color(red: 17 / 255, green: 17 / 255, blue: 19 / 255)
     static let success = Color(red: 22 / 255, green: 128 / 255, blue: 92 / 255)
-    static let leaf = Color(uiColor: UIColor { trait in
-        trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.45, green: 0.84, blue: 0.64, alpha: 1)
-            : UIColor(red: 23 / 255, green: 122 / 255, blue: 74 / 255, alpha: 1)
-    })
-    static let onLeaf = Color(uiColor: UIColor { trait in
-        trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.04, green: 0.14, blue: 0.08, alpha: 1)
-            : .white
-    })
-    static let canvas = Color(uiColor: UIColor { trait in
-        trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.07, green: 0.07, blue: 0.08, alpha: 1)
-            : UIColor(red: 248 / 255, green: 248 / 255, blue: 247 / 255, alpha: 1)
-    })
-    static let card = Color(uiColor: UIColor { trait in
-        trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.12, green: 0.12, blue: 0.13, alpha: 1)
-            : .white
-    })
-    static let hairline = Color(uiColor: UIColor { trait in
-        trait.userInterfaceStyle == .dark
-            ? UIColor(white: 1, alpha: 0.10)
-            : UIColor(white: 0, alpha: 0.06)
-    })
+    static let leaf = iagAdaptiveColor(
+        light: (23 / 255, 122 / 255, 74 / 255),
+        dark: (0.45, 0.84, 0.64)
+    )
+    static let onLeaf = iagAdaptiveColor(
+        light: (1, 1, 1),
+        dark: (0.04, 0.14, 0.08)
+    )
+    static let canvas = iagAdaptiveColor(
+        light: (248 / 255, 248 / 255, 247 / 255),
+        dark: (0.07, 0.07, 0.08)
+    )
+    static let card = iagAdaptiveColor(
+        light: (1, 1, 1),
+        dark: (0.12, 0.12, 0.13)
+    )
+    static let hairline = iagAdaptiveGray(light: 0, lightAlpha: 0.06, dark: 1, darkAlpha: 0.10)
     static let muted = Color.secondary
     static let radius: CGFloat = 16
     static let radiusSm: CGFloat = 12
+}
+
+enum IagTextCase {
+    case never, words
 }
 
 func iagGreeting() -> String {
@@ -107,6 +107,30 @@ func iagGreeting() -> String {
     if hour < 12 { return "Good morning" }
     if hour < 17 { return "Good afternoon" }
     return "Good evening"
+}
+
+func iagAdaptiveColor(light: (Double, Double, Double), dark: (Double, Double, Double)) -> Color {
+    #if canImport(UIKit)
+    Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: dark.0, green: dark.1, blue: dark.2, alpha: 1)
+            : UIColor(red: light.0, green: light.1, blue: light.2, alpha: 1)
+    })
+    #else
+    Color(red: light.0, green: light.1, blue: light.2)
+    #endif
+}
+
+func iagAdaptiveGray(light: Double, lightAlpha: Double, dark: Double, darkAlpha: Double) -> Color {
+    #if canImport(UIKit)
+    Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(white: dark, alpha: darkAlpha)
+            : UIColor(white: light, alpha: lightAlpha)
+    })
+    #else
+    Color(white: light, opacity: lightAlpha)
+    #endif
 }
 
 func iagColor(_ hex: UInt32) -> Color {
@@ -685,7 +709,9 @@ struct IagPageTitle: View {
 
 extension View {
     /// Pins the page name on the navigation bar, with an optional context line under it.
+    @ViewBuilder
     func iagBar(_ title: String, subtitle: String? = nil) -> some View {
+        #if os(iOS)
         self
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -696,6 +722,47 @@ extension View {
                     IagPageTitle(title: title, subtitle: subtitle)
                 }
             }
+        #else
+        self
+            .navigationTitle(title)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    IagPageTitle(title: title, subtitle: subtitle)
+                }
+            }
+        #endif
+    }
+
+    @ViewBuilder
+    func iagHideNavigationBar() -> some View {
+        #if os(iOS)
+        self.toolbar(.hidden, for: .navigationBar)
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func iagTextCase(_ style: IagTextCase) -> some View {
+        #if os(iOS)
+        switch style {
+        case .never:
+            self.textInputAutocapitalization(.never)
+        case .words:
+            self.textInputAutocapitalization(.words)
+        }
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func iagNumericKeyboard(_ numeric: Bool) -> some View {
+        #if os(iOS)
+        self.keyboardType(numeric ? .decimalPad : .default)
+        #else
+        self
+        #endif
     }
 
     func iagCanvas() -> some View {
