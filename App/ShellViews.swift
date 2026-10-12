@@ -1,20 +1,12 @@
 import SwiftUI
 import ErpCore
 
-enum ShellTab: Int, Hashable {
-    case home = 0
-    case desks = 1
-    case clock = 2
-    case approvals = 3
-    case more = 4
-}
-
 private struct ShellTabKey: EnvironmentKey {
-    static let defaultValue: Binding<ShellTab> = .constant(.home)
+    static let defaultValue: Binding<String> = .constant("home")
 }
 
 extension EnvironmentValues {
-    var shellTab: Binding<ShellTab> {
+    var shellTab: Binding<String> {
         get { self[ShellTabKey.self] }
         set { self[ShellTabKey.self] = newValue }
     }
@@ -22,43 +14,58 @@ extension EnvironmentValues {
 
 struct ShellView: View {
     @EnvironmentObject var box: StoreBox
-    @State private var tab = ShellTab.home
+    @State private var tab = "home"
 
     var body: some View {
         let _ = box.tick
+        let specs = shellTabs(appId: box.store.activeAppId, role: box.store.roleName, canApprove: box.store.canApprove, canClockIn: box.store.canClockIn)
         TabView(selection: $tab) {
-            Group {
-                if box.store.activeAppId == nil {
-                    AppsLauncherView()
-                } else {
-                    HomeView()
-                }
+            ForEach(specs) { spec in
+                shellPage(spec)
+                    .tabItem { Label(spec.label, systemImage: spec.icon) }
+                    .tag(spec.id)
+                    .badge(spec.id == "approvals" ? box.store.appPendingApprovals.count : 0)
             }
-            .tabItem { Label("Home", systemImage: "house") }
-            .tag(ShellTab.home)
-            DepartmentsView()
-                .tabItem { Label("Desks", systemImage: "building.2") }
-                .tag(ShellTab.desks)
-            NavigationStack {
-                ClockInView()
-            }
-            .tabItem { Label("Clock", systemImage: "clock") }
-            .tag(ShellTab.clock)
-            if box.store.canApprove {
-                ApprovalsView()
-                    .tabItem { Label("Approvals", systemImage: "checkmark.rectangle") }
-                    .tag(ShellTab.approvals)
-                    .badge(box.store.appPendingApprovals.count)
-            }
-            MoreView()
-                .tabItem { Label("More", systemImage: "square.grid.2x2") }
-                .tag(ShellTab.more)
+        }
+        .id(box.store.activeAppId ?? "launcher")
+        .onChange(of: box.store.activeAppId) { _, _ in
+            tab = "home"
         }
         .tint(IagTheme.leaf)
         .toolbarColorScheme(box.store.themeMode == "dark" ? .dark : box.store.themeMode == "light" ? .light : nil, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarBackground(IagTheme.card, for: .tabBar)
         .environment(\.shellTab, $tab)
+    }
+
+    @ViewBuilder
+    private func shellPage(_ spec: ShellTabSpec) -> some View {
+        switch spec.id {
+        case "home":
+            if box.store.activeAppId == nil {
+                AppsLauncherView()
+            } else {
+                HomeView()
+            }
+        case "desks":
+            DepartmentsView()
+        case "clock":
+            NavigationStack { ClockInView() }
+        case "calendar":
+            NavigationStack { AttendanceCalendarView() }
+        case "approvals":
+            ApprovalsView()
+        default:
+            NavigationStack {
+                if let moduleId = spec.moduleId, let entity = spec.entity {
+                    EntityListView(moduleId: moduleId, entity: entity)
+                } else if let moduleId = spec.moduleId {
+                    DepartmentView(moduleId: moduleId)
+                } else {
+                    DepartmentsView()
+                }
+            }
+        }
     }
 }
 
@@ -79,6 +86,10 @@ struct FinHome: View {
     @Binding var query: String
     var onOpenApp: (String) -> Void
     var onLeaveApp: (() -> Void)?
+    var viewAllTab: String = "desks"
+    var toolsTitle: String = "Quick actions"
+    var viewAllModule: String? = nil
+    var viewAllDesks: Bool = false
 
     @State private var searching = false
 
@@ -88,6 +99,7 @@ struct FinHome: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
+                utilityApps
                 if searching {
                     searchField
                 }
@@ -121,56 +133,93 @@ struct FinHome: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 8)
-            HStack(spacing: 16) {
-                if let onLeaveApp {
-                    Button(action: onLeaveApp) {
-                        Image(systemName: "square.grid.2x2")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(.primary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Apps")
-                }
-                Button {
-                    searching.toggle()
-                    if !searching { query = "" }
-                } label: {
-                    Image(systemName: "magnifyingglass")
+            if let onLeaveApp {
+                Button(action: onLeaveApp) {
+                    Image(systemName: "square.grid.2x2")
                         .font(.body.weight(.medium))
                         .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Search")
-                Button {
-                    guard canOpenApprovals else { return }
-                    shellTab.wrappedValue = .approvals
-                } label: {
-                    ZStack(alignment: .topTrailing) {
-                        Image(systemName: "bell")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(.primary)
-                        if approvalCount > 0 {
-                            Text(approvalCount > 9 ? "9+" : "\(approvalCount)")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(IagTheme.onLeaf)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(IagTheme.leaf, in: Capsule())
-                                .offset(x: 8, y: -6)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Approvals")
-                NavigationLink {
-                    ProfileView()
-                } label: {
-                    Image(systemName: "person.circle")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
-                }
-                .accessibilityLabel("Account")
+                .accessibilityLabel("Apps")
             }
+            if canOpenApprovals {
+                NavigationLink {
+                    ApprovalsList()
+                } label: {
+                    cornerIcon(systemName: "bell", color: IagTheme.leaf, badge: approvalCount)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Notifications")
+            }
+            NavigationLink {
+                ProfileView()
+            } label: {
+                cornerIcon(systemName: "person.crop.circle", color: Color(red: 0.05, green: 0.45, blue: 0.72))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Account")
+        }
+    }
+
+    private func cornerIcon(systemName: String, color: Color, badge: Int = 0) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Circle()
+                .fill(color.opacity(0.12))
+                .frame(width: 32, height: 32)
+            Image(systemName: systemName)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(color)
+                .frame(width: 32, height: 32)
+            if badge > 0 {
+                Text(badge > 9 ? "9+" : "\(badge)")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(IagTheme.onLeaf)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(IagTheme.leaf, in: Capsule())
+                    .offset(x: 6, y: -4)
+            }
+        }
+    }
+
+    private var utilityApps: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button {
+                searching.toggle()
+                if !searching { query = "" }
+            } label: {
+                utilityApp(title: "Search", systemName: "magnifyingglass", color: Color(red: 0.34, green: 0.33, blue: 0.31))
+            }
+            .buttonStyle(.plain)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func utilityApp(title: String, systemName: String, color: Color, badge: Int = 0) -> some View {
+        VStack(spacing: 8) {
+            ZStack(alignment: .topTrailing) {
+                Circle()
+                    .fill(color.opacity(0.12))
+                    .frame(width: 52, height: 52)
+                Image(systemName: systemName)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(color)
+                    .frame(width: 52, height: 52)
+                if badge > 0 {
+                    Text(badge > 9 ? "9+" : "\(badge)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(IagTheme.onLeaf)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(IagTheme.leaf, in: Capsule())
+                        .offset(x: 6, y: -4)
+                }
+            }
+            Text(title)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .frame(width: 76)
         }
     }
 
@@ -299,45 +348,44 @@ struct FinHome: View {
         VStack(alignment: .leading, spacing: 12) {
             if !actions.isEmpty {
                 HStack {
-                    Text("Quick actions")
+                    Text(toolsTitle)
                         .font(.subheadline.weight(.semibold))
                     Spacer()
-                    Button("View all") { shellTab.wrappedValue = .desks }
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(IagTheme.leaf)
+                    if viewAllDesks {
+                        NavigationLink {
+                            DepartmentsView()
+                        } label: {
+                            Text("View all")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(IagTheme.leaf)
+                        }
                         .buttonStyle(.plain)
+                    } else if let module = viewAllModule {
+                        NavigationLink {
+                            DepartmentView(moduleId: module)
+                        } label: {
+                            Text("View all")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(IagTheme.leaf)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Button("View all") { shellTab.wrappedValue = viewAllTab }
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(IagTheme.leaf)
+                            .buttonStyle(.plain)
+                    }
                 }
             }
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 12) {
-                ForEach(actions) { action in
-                    QuickActionOpener(action: action) {
-                        VStack(spacing: 6) {
-                            ZStack(alignment: .topTrailing) {
-                                Circle()
-                                    .fill(iagColor(action.color).opacity(0.12))
-                                    .frame(width: 36, height: 36)
-                                    .overlay {
-                                        Image(systemName: action.icon)
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundStyle(iagColor(action.color))
-                                            .symbolRenderingMode(.hierarchical)
-                                    }
-                                if action.kind == .approvals && approvalCount > 0 {
-                                    Circle()
-                                        .fill(IagTheme.leaf)
-                                        .frame(width: 8, height: 8)
-                                        .offset(x: 2, y: -2)
-                                }
-                            }
-                            Text(action.label)
-                                .font(.caption2.weight(.medium))
-                                .foregroundStyle(.primary)
-                                .multilineTextAlignment(.center)
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.8)
-                                .frame(height: 26, alignment: .top)
-                        }
-                        .frame(maxWidth: .infinity)
+            ForEach(toolSections, id: \.title) { section in
+                if toolSections.count > 1 {
+                    Text(section.title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 12) {
+                    ForEach(section.actions) { action in
+                        departmentTool(action)
                     }
                 }
             }
@@ -358,6 +406,57 @@ struct FinHome: View {
         )
     }
 
+    private struct ToolSection: Identifiable {
+        var title: String
+        var actions: [QuickAction]
+        var id: String { title }
+    }
+
+    private var toolSections: [ToolSection] {
+        var sections: [ToolSection] = []
+        for action in actions {
+            let title = action.section ?? ""
+            if let index = sections.indices.last, sections[index].title == title {
+                sections[index].actions.append(action)
+            } else {
+                sections.append(ToolSection(title: title, actions: [action]))
+            }
+        }
+        return sections
+    }
+
+    private func departmentTool(_ action: QuickAction) -> some View {
+        QuickActionOpener(action: action) {
+            VStack(spacing: 6) {
+                ZStack(alignment: .topTrailing) {
+                    Circle()
+                        .fill(iagColor(action.color).opacity(0.12))
+                        .frame(width: 36, height: 36)
+                        .overlay {
+                            Image(systemName: action.entity.map(entityIcon) ?? action.icon)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(iagColor(action.color))
+                                .symbolRenderingMode(.hierarchical)
+                        }
+                    if action.kind == .approvals && approvalCount > 0 {
+                        Circle()
+                            .fill(IagTheme.leaf)
+                            .frame(width: 8, height: 8)
+                            .offset(x: 2, y: -2)
+                    }
+                }
+                Text(action.label)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .frame(height: 26, alignment: .top)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
     private var frequents: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(frequentApps.isEmpty ? "Jump back" : "Your apps")
@@ -368,7 +467,7 @@ struct FinHome: View {
                     ForEach(frequentApps) { app in
                         Button {
                             onOpenApp(app.id)
-                            shellTab.wrappedValue = .desks
+                            shellTab.wrappedValue = "home"
                         } label: {
                             VStack(spacing: 8) {
                                 ZStack {
@@ -423,7 +522,7 @@ struct FinHome: View {
                 Text("Waiting for you")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                Button("View all") { shellTab.wrappedValue = .approvals }
+                NavigationLink { ApprovalsList() } label: { Text("View all") }
                     .font(.caption.weight(.medium))
                     .foregroundStyle(IagTheme.leaf)
                     .buttonStyle(.plain)
@@ -493,17 +592,23 @@ struct HomeView: View {
                 fullName: store.user?.name ?? first,
                 detail: store.activeSuiteApp?.label ?? store.user?.role ?? appName,
                 stats: store.welcomeStats,
-                actions: Array(store.homeQuickActions.prefix(8)),
+                actions: store.departmentTools.isEmpty ? Array(store.homeQuickActions.prefix(8)) : store.departmentTools,
                 approvalCount: store.appPendingApprovals.count,
                 canOpenApprovals: store.canApprove,
                 kpis: store.kpis,
                 apps: [],
-                recents: Array(store.recent.filter { store.canOpen($0.moduleId) }.prefix(6)),
+                recents: Array(store.recent.filter { rec in
+                    store.canOpen(rec.moduleId) && (store.activeSuiteApp?.moduleIds.contains(rec.moduleId) ?? true)
+                }.prefix(6)),
                 pending: Array(store.appPendingApprovals.prefix(3)),
                 hits: store.searchHits(query),
                 query: $query,
                 onOpenApp: { store.openApp($0) },
-                onLeaveApp: { store.closeApp() }
+                onLeaveApp: { store.closeApp() },
+                viewAllTab: shellTabs(appId: store.activeAppId, role: store.roleName, canApprove: store.canApprove, canClockIn: store.canClockIn).first { !["home", "approvals", "clock", "calendar"].contains($0.id) }?.id ?? "desks",
+                toolsTitle: store.activeSuiteApp?.label ?? "Quick actions",
+                viewAllModule: store.departmentTools.isEmpty || store.appModules.count != 1 ? nil : store.appModules.first?.id,
+                viewAllDesks: !store.departmentTools.isEmpty && store.appModules.count > 1
             )
         }
     }
@@ -518,8 +623,22 @@ struct DepartmentsView: View {
         let _ = box.tick
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         NavigationStack {
+            let modules = store.appModules
+            let records = store.records.filter { rec in
+                guard store.canOpen(rec.moduleId) else { return false }
+                if let app = store.activeSuiteApp { return app.moduleIds.contains(rec.moduleId) }
+                return true
+            }
+            let open = records.filter { store.isOpenStatus($0.status) }.count
+            let value = records.compactMap(\.amount).reduce(0, +)
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    PageStats(stats: [
+                        ("Desks", "\(modules.count)"),
+                        ("Features", "\(modules.reduce(0) { $0 + $1.entities.count })"),
+                        ("Open", "\(open)"),
+                        ("Value", value == 0 ? "—" : compactMoney(value)),
+                    ])
                     let groups = departmentGroups.filter { group in
                         store.appModules.contains { module in
                             module.group == group && (q.isEmpty || module.label.lowercased().contains(q) || module.entities.contains { $0.lowercased().contains(q) })
@@ -536,7 +655,7 @@ struct DepartmentsView: View {
                             return module.label.lowercased().contains(q)
                                 || module.entities.contains { $0.lowercased().contains(q) }
                         }
-                        Text(group).font(.subheadline.weight(.semibold))
+                        SectionHeading(title: group, detail: "\(modules.count)")
                         IagGrouped {
                             ForEach(Array(modules.enumerated()), id: \.element.id) { index, module in
                                 NavigationLink {
@@ -586,16 +705,23 @@ struct ApprovalsList: View {
 
     var body: some View {
         let _ = box.tick
+        let waiting = box.store.appPendingApprovals
+        let value = waiting.compactMap(\.amount).reduce(0, +)
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Waiting for you")
-                    .font(.subheadline.weight(.semibold))
-                if box.store.appPendingApprovals.isEmpty {
+                PageStats(stats: [
+                    ("Waiting", "\(waiting.count)"),
+                    ("Desks", "\(Set(waiting.map(\.moduleId)).count)"),
+                    ("Types", "\(Set(waiting.map(\.entity)).count)"),
+                    ("Value", value == 0 ? "—" : compactMoney(value)),
+                ])
+                SectionHeading(title: "Queue", detail: waiting.isEmpty ? "Clear" : "\(waiting.count) open")
+                if waiting.isEmpty {
                     IagEmptyHint(text: "Nothing is waiting for your desk.", systemName: "checkmark.circle")
                         .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 } else {
                     IagGrouped {
-                        ForEach(Array(box.store.appPendingApprovals.enumerated()), id: \.element.id) { index, rec in
+                        ForEach(Array(waiting.enumerated()), id: \.element.id) { index, rec in
                             NavigationLink {
                                 RecordDetailView(recordId: rec.id)
                             } label: {
@@ -610,7 +736,7 @@ struct ApprovalsList: View {
                                 .padding(.vertical, 8)
                             }
                             .buttonStyle(.plain)
-                            if index < box.store.appPendingApprovals.count - 1 { IagRowDivider() }
+                            if index < waiting.count - 1 { IagRowDivider() }
                         }
                     }
                 }
@@ -627,17 +753,16 @@ struct ApprovalsList: View {
 }
 
 struct QuickActionOpener<Label: View>: View {
-    @Environment(\.shellTab) private var shellTab
     let action: QuickAction
     @ViewBuilder var label: () -> Label
 
     var body: some View {
         switch action.kind {
         case .clock:
-            Button { shellTab.wrappedValue = .clock } label: { label() }
+            NavigationLink { ClockInView() } label: { label() }
                 .buttonStyle(.plain)
         case .approvals:
-            Button { shellTab.wrappedValue = .approvals } label: { label() }
+            NavigationLink { ApprovalsList() } label: { label() }
                 .buttonStyle(.plain)
         default:
             NavigationLink { QuickActionDestination(action: action) } label: { label() }
@@ -715,12 +840,14 @@ struct MoreView: View {
                             .stroke(IagTheme.hairline, lineWidth: 0.5)
                     )
 
+                    PageStats(stats: store.welcomeStats.map { (label: $0.label, value: $0.value) })
+
                     if store.activeAppId != nil {
-                        Text("This app").font(.subheadline.weight(.semibold))
+                        SectionHeading(title: "This app", detail: store.activeSuiteApp?.label)
                         IagGrouped {
                             Button {
                                 store.closeApp()
-                                shellTab.wrappedValue = .home
+                                shellTab.wrappedValue = "home"
                             } label: {
                                 DeskRow(
                                     title: "Switch app",
@@ -739,7 +866,7 @@ struct MoreView: View {
                         let tools = store.visibleWorkspaceTools.filter { $0.group == group }
                         let showAccess = group == "Admin" && store.isAdmin
                         if !tools.isEmpty || showAccess {
-                            Text(group).font(.subheadline.weight(.semibold))
+                            SectionHeading(title: group, detail: "\(tools.count + (showAccess ? 1 : 0))")
                             IagGrouped {
                                 if showAccess {
                                     NavigationLink {
@@ -781,7 +908,7 @@ struct MoreView: View {
             }
             .scrollIndicators(.hidden)
             .background(IagTheme.canvas.ignoresSafeArea())
-            .iagBar("More", subtitle: role)
+            .iagBar("Workspace", subtitle: role)
         }
     }
 }
@@ -869,7 +996,15 @@ private struct RecordToolList: View {
     var subtitle: (ErpRecord) -> String = { $0.entity }
 
     var body: some View {
+        let open = records.filter { $0.status.lowercased().contains("pending") || $0.status.lowercased().contains("open") || $0.status.lowercased().contains("submitted") }.count
+        let value = records.compactMap(\.amount).reduce(0, +)
         ToolCanvas {
+            PageStats(stats: [
+                ("Records", "\(records.count)"),
+                ("Open", "\(open)"),
+                ("Types", "\(Set(records.map(\.entity)).count)"),
+                ("Value", value == 0 ? "—" : compactMoney(value)),
+            ])
             if records.isEmpty {
                 IagEmptyHint(text: empty, systemName: icon)
                     .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -929,29 +1064,24 @@ struct WorkspaceToolView: View {
                 }
                 .searchable(text: $query, prompt: "IAG-LOT, SI-2026, UAX 221K…")
             case "analytics":
+                let visibleRecords = store.records.filter { store.canOpen($0.moduleId) }
+                let analyticsValue = visibleRecords.compactMap(\.amount).reduce(0, +)
                 ToolCanvas {
-                    IagGrouped {
-                        IagKeyValue(label: "Departments", value: "\(store.visibleModules.count)")
-                            .padding(.horizontal, 14).padding(.vertical, 10)
-                        IagRowDivider()
-                        IagKeyValue(label: "Features", value: "\(store.visibleModules.reduce(0) { $0 + $1.entities.count })")
-                            .padding(.horizontal, 14).padding(.vertical, 10)
-                        IagRowDivider()
-                        IagKeyValue(label: "Records", value: "\(store.records.filter { store.canOpen($0.moduleId) }.count)")
-                            .padding(.horizontal, 14).padding(.vertical, 10)
-                        IagRowDivider()
-                        IagKeyValue(label: "Pending approvals", value: "\(store.pendingApprovals.count)")
-                            .padding(.horizontal, 14).padding(.vertical, 10)
-                    }
+                    PageStats(stats: [
+                        ("Desks", "\(store.visibleModules.count)"),
+                        ("Features", "\(store.visibleModules.reduce(0) { $0 + $1.entities.count })"),
+                        ("Records", "\(visibleRecords.count)"),
+                        ("Value", analyticsValue == 0 ? "—" : compactMoney(analyticsValue)),
+                    ])
                     ForEach(departmentGroups, id: \.self) { group in
                         let modules = store.visibleModules.filter { $0.group == group }
                         if !modules.isEmpty {
-                            Text(group).font(.subheadline.weight(.semibold))
+                            SectionHeading(title: group, detail: "\(modules.reduce(0) { $0 + store.forModule($1.id).count }) records")
                             IagGrouped {
                                 ForEach(Array(modules.enumerated()), id: \.element.id) { index, module in
                                     IagKeyValue(label: module.label, value: "\(store.forModule(module.id).count)")
                                         .padding(.horizontal, 14).padding(.vertical, 10)
-                                    if index < modules.count - 1 { IagRowDivider() }
+                                    if index < modules.count - 1 { IagRowDivider(inset: 14) }
                                 }
                             }
                         }
@@ -975,7 +1105,7 @@ struct WorkspaceToolView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 12)
-                            if index < erpTemplates.count - 1 { IagRowDivider() }
+                            if index < erpTemplates.count - 1 { IagRowDivider(inset: 14) }
                         }
                     }
                 }
@@ -1038,21 +1168,25 @@ struct WorkspaceToolView: View {
                 )
             case "system-health":
                 ToolCanvas {
+                    PageStats(stats: [
+                        ("Records", "\(store.records.count)"),
+                        ("Roles", "\(store.roles.count)"),
+                        ("Users", "\(store.workspaceUsers.count)"),
+                        ("Session", store.remoteSession ? "Live" : "Device"),
+                    ])
+                    SectionHeading(title: "This install", detail: appVersion)
                     IagGrouped {
                         let rows: [(String, String)] = [
-                            ("App", "\(appName) \(appVersion)"),
+                            ("App", appName),
                             ("Session", store.remoteSession ? "Connected" : "On this device"),
                             ("Role", store.user?.role ?? "—"),
-                            ("Records", "\(store.records.count)"),
-                            ("Roles", "\(store.roles.count)"),
-                            ("Workspace users", "\(store.workspaceUsers.count)"),
-                            ("Theme", store.themeMode),
+                            ("Theme", store.themeMode.capitalized),
                         ]
                         ForEach(Array(rows.enumerated()), id: \.element.0) { index, row in
                             IagKeyValue(label: row.0, value: row.1)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
-                            if index < rows.count - 1 { IagRowDivider() }
+                            if index < rows.count - 1 { IagRowDivider(inset: 14) }
                         }
                     }
                 }
@@ -1079,7 +1213,7 @@ struct WorkspaceToolView: View {
                 Text(tool?.description ?? "Unknown tool")
             }
         }
-        .iagBar(tool?.label ?? "Workspace", subtitle: "More")
+        .iagBar(tool?.label ?? "Workspace", subtitle: "Workspace")
     }
 }
 
@@ -1102,9 +1236,8 @@ func workspaceIcon(_ id: String) -> String {
 }
 
 func featureSummary(_ module: ErpModule) -> String {
-    let names = module.entities.prefix(3).joined(separator: ", ")
-    let extra = module.entities.count > 3 ? " +\(module.entities.count - 3)" : ""
-    return "\(module.entities.count) features · \(names)\(extra)"
+    if !module.description.isEmpty { return module.description }
+    return module.entities.count == 1 ? "1 feature" : "\(module.entities.count) features"
 }
 
 let erpTemplates = [

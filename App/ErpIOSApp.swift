@@ -347,12 +347,103 @@ struct IagKeyValue: View {
 }
 
 struct IagRowDivider: View {
+    var inset: CGFloat = 66
+
     var body: some View {
         Rectangle()
             .fill(IagTheme.hairline)
             .frame(height: 1)
-            .padding(.leading, 66)
+            .padding(.leading, inset)
     }
+}
+
+struct PageStats: View {
+    var stats: [(label: String, value: String)]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(stats.enumerated()), id: \.offset) { index, stat in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(stat.value)
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                    Text(stat.label)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if index < stats.count - 1 {
+                    Rectangle()
+                        .fill(IagTheme.hairline)
+                        .frame(width: 0.5, height: 22)
+                        .padding(.horizontal, 4)
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(IagTheme.hairline, lineWidth: 0.5)
+        )
+    }
+}
+
+struct SectionHeading: View {
+    var title: String
+    var detail: String? = nil
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+            Spacer(minLength: 8)
+            if let detail, !detail.isEmpty {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+func prettyLabel(_ raw: String) -> String {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.contains(" ") || trimmed.contains("&") || trimmed.contains("(") { return trimmed }
+    var words: [String] = []
+    var current = ""
+    for character in trimmed {
+        if character == "_" || character == "-" {
+            if !current.isEmpty { words.append(current); current = "" }
+            continue
+        }
+        if character.isUppercase, !current.isEmpty, current.last?.isLowercase == true {
+            words.append(current)
+            current = String(character)
+        } else {
+            current.append(character)
+        }
+    }
+    if !current.isEmpty { words.append(current) }
+    return words.map { word in
+        guard let first = word.first else { return word }
+        return first.uppercased() + word.dropFirst()
+    }.joined(separator: " ")
+}
+
+func compactMoney(_ amount: Double) -> String {
+    let sign = amount < 0 ? "-" : ""
+    let magnitude = Swift.abs(amount)
+    if magnitude >= 1_000_000_000 { return "\(sign)UGX \(String(format: "%.1f", magnitude / 1_000_000_000))B" }
+    if magnitude >= 1_000_000 { return "\(sign)UGX \(String(format: "%.0f", magnitude / 1_000_000))M" }
+    if magnitude >= 10_000 { return "\(sign)UGX \(String(format: "%.0f", magnitude / 1_000))K" }
+    return formatMoney(amount)
 }
 
 struct AppTile: View {

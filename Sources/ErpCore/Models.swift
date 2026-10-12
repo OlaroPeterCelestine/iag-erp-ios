@@ -316,6 +316,304 @@ public func canOpenSuiteApp(_ role: String?, _ appId: String, definition: RoleDe
     return app.moduleIds.contains { canAccessModule(role, $0, definition: definition) }
 }
 
+public struct ShellTabSpec: Equatable, Identifiable, Sendable {
+    public var id: String
+    public var label: String
+    public var icon: String
+    public var moduleId: String?
+    public var entity: String?
+
+    public init(id: String, label: String, icon: String, moduleId: String? = nil, entity: String? = nil) {
+        self.id = id
+        self.label = label
+        self.icon = icon
+        self.moduleId = moduleId
+        self.entity = entity
+    }
+}
+
+public func featureToolLabel(_ entity: String) -> String {
+    let trimmed = entity
+        .replacingOccurrences(of: " Requests", with: "")
+        .replacingOccurrences(of: " Request", with: "")
+    if trimmed.count <= 16 { return trimmed }
+    return trimmed.split(separator: " ").prefix(2).joined(separator: " ")
+}
+
+public func shellTabs(appId: String?, role: String?, canApprove: Bool, canClockIn: Bool) -> [ShellTabSpec] {
+    let home = ShellTabSpec(id: "home", label: "Home", icon: "house")
+    var tabs = [home]
+    if let appId, suiteAppById(appId) != nil {
+        tabs.append(contentsOf: departmentFeatureTabs(appId: appId, role: role).prefix(2))
+    } else {
+        tabs.append(ShellTabSpec(id: "desks", label: "Desks", icon: "building.2"))
+    }
+    if canClockIn {
+        tabs.append(ShellTabSpec(id: "clock", label: "Clock", icon: "clock"))
+        tabs.append(ShellTabSpec(id: "calendar", label: "Calendar", icon: "calendar"))
+    }
+    if canApprove, tabs.count < 5, appId == nil || appHasApprovals(appId ?? "") {
+        tabs.append(ShellTabSpec(id: "approvals", label: "Approvals", icon: "checkmark.rectangle"))
+    }
+    return Array(tabs.prefix(5))
+}
+
+private func departmentFeatureTabs(appId: String, role: String?) -> [ShellTabSpec] {
+    let department = defaultDepartmentForRole(role)
+    let allowed = appFeatureTabs(appId).filter { spec in
+        guard let moduleId = spec.moduleId else { return true }
+        return canAccessModule(role, moduleId)
+    }
+    let mine = allowed.filter { $0.moduleId == department }
+    let rest = allowed.filter { $0.moduleId != department }
+    return mine + rest
+}
+
+private func appHasApprovals(_ appId: String) -> Bool {
+    guard let app = suiteAppById(appId) else { return false }
+    return erpModules().contains { app.moduleIds.contains($0.id) && !$0.approvalEntities.isEmpty }
+}
+
+private func appTab(_ id: String, _ label: String, _ icon: String, _ moduleId: String, _ entity: String? = nil) -> ShellTabSpec {
+    ShellTabSpec(id: id, label: label, icon: icon, moduleId: moduleId, entity: entity)
+}
+
+private func appFeatureTabs(_ appId: String) -> [ShellTabSpec] {
+    switch appId {
+    case "hr":
+        return [
+            appTab("people", "People", "person.2", "payroll", "Employees"),
+            appTab("leave", "Leave", "calendar", "payroll", "Leave Requests"),
+            appTab("payroll", "Payroll", "banknote", "payroll", "Payroll Runs"),
+            appTab("attendance", "Attendance", "clock", "payroll", "Attendance"),
+        ]
+    case "finance":
+        return [
+            appTab("banking", "Banking", "building.columns", "banking"),
+            appTab("receipts", "Receipts", "arrow.down.circle", "receipts-payments", "Receipts"),
+            appTab("accounts", "Accounts", "book", "accounts"),
+            appTab("reports", "Reports", "chart.bar", "reports"),
+        ]
+    case "sales":
+        return [
+            appTab("customers", "Customers", "person.crop.circle", "sales", "Customers"),
+            appTab("invoices", "Invoices", "doc.text", "sales", "Sales Invoices"),
+            appTab("orders", "Orders", "shippingbox", "sales", "Sales Orders"),
+            appTab("quotes", "Quotes", "doc.plaintext", "sales", "Sales Quotes"),
+        ]
+    case "crm":
+        return [
+            appTab("leads", "Leads", "person.badge.plus", "crm", "Leads"),
+            appTab("opportunities", "Deals", "chart.line.uptrend.xyaxis", "crm", "Opportunities"),
+            appTab("accounts", "Accounts", "building.2", "crm", "Accounts"),
+            appTab("followups", "Follow-ups", "bell", "crm", "Follow-ups"),
+        ]
+    case "pos":
+        return [
+            appTab("tickets", "Tickets", "ticket", "pos", "Open Tickets"),
+            appTab("sessions", "Sessions", "creditcard", "pos", "Cash Sessions"),
+            appTab("products", "Products", "bag", "pos", "POS Products"),
+            appTab("closings", "Closings", "checkmark.circle", "pos", "Daily Closings"),
+        ]
+    case "procurement":
+        return [
+            appTab("orders", "Orders", "cart", "purchases", "Purchase Orders"),
+            appTab("suppliers", "Suppliers", "person.2", "purchases", "Suppliers"),
+            appTab("receipts", "Receipts", "shippingbox", "purchases", "Goods Receipts"),
+            appTab("stock", "Stock", "cube.box", "inventory"),
+        ]
+    case "production":
+        return [
+            appTab("plans", "Plans", "calendar", "production", "Production Plans"),
+            appTab("batches", "Batches", "square.stack.3d.up", "production", "Batch Records"),
+            appTab("machines", "Machines", "gearshape.2", "production", "Machines"),
+            appTab("yield", "Yield", "chart.bar", "production", "Yield Reports"),
+        ]
+    case "fleet":
+        return [
+            appTab("vehicles", "Vehicles", "car.fill", "fleet", "Vehicles"),
+            appTab("fuel", "Fuel", "fuelpump", "fleet", "Fuel Logs"),
+            appTab("trips", "Trips", "map", "fleet", "Trip Requests"),
+            appTab("maintenance", "Service", "wrench", "fleet", "Maintenance Requests"),
+        ]
+    case "logistics":
+        return [
+            appTab("shipments", "Shipments", "shippingbox", "logistics", "Shipments"),
+            appTab("dispatch", "Dispatch", "arrow.triangle.branch", "logistics", "Dispatch Board"),
+            appTab("routes", "Routes", "map", "logistics", "Routes"),
+            appTab("runs", "Runs", "box.truck", "distribution", "Delivery Runs"),
+        ]
+    case "projects":
+        return [
+            appTab("projects", "Projects", "briefcase", "projects", "New Project"),
+            appTab("materials", "Materials", "cube.box", "projects", "Material Requests"),
+            appTab("ipc", "IPC", "doc.text", "projects", "Payment Requests (IPC)"),
+            appTab("programs", "Programs", "calendar", "projects", "Work Programs"),
+        ]
+    case "contracts":
+        return [
+            appTab("contracts", "Contracts", "doc.badge.checkmark", "contract-manager", "Contracts"),
+            appTab("contractors", "Contractors", "person.2", "contract-manager", "Contractors"),
+            appTab("invoices", "Invoices", "doc.text", "contract-manager", "Contractor Invoices"),
+            appTab("bonds", "Bonds", "checkmark.seal", "contract-manager", "Performance Bonds"),
+        ]
+    case "security":
+        return [
+            appTab("gate", "Gate", "door.left.hand.open", "security", "Gate Passes"),
+            appTab("visitors", "Visitors", "person.badge.key", "security", "Visitor Passes"),
+            appTab("incidents", "Incidents", "exclamationmark.shield", "security", "Security Incidents"),
+        ]
+    case "quality":
+        return [
+            appTab("lab", "Lab", "testtube.2", "lab"),
+            appTab("qa", "QA", "checkmark.seal", "qa"),
+            appTab("rnd", "R&D", "flask", "rnd"),
+            appTab("benchmark", "Systems", "chart.bar", "benchmark"),
+        ]
+    case "requests":
+        return [
+            appTab("general", "Requests", "list.clipboard", "general-requests", "General Requests"),
+            appTab("oral", "Oral pay", "mic", "oral-payment-requests", "Oral Payment Requests"),
+        ]
+    case "dms":
+        return [
+            appTab("folders", "Folders", "folder", "folders"),
+            appTab("documents", "Documents", "doc", "documents"),
+        ]
+    default:
+        guard let app = suiteAppById(appId) else { return [] }
+        let catalog = erpModules()
+        return app.moduleIds.prefix(4).map { id in
+            let module = catalog.first { $0.id == id }
+            return ShellTabSpec(id: id, label: module?.label ?? id, icon: module?.icon ?? "square.grid.2x2", moduleId: id)
+        }
+    }
+}
+
+public func kpisForApp(_ appId: String, records: [ErpRecord]) -> [Kpi] {
+    func count(_ moduleId: String, _ entity: String) -> String {
+        "\(records.filter { $0.moduleId == moduleId && $0.entity == entity }.count)"
+    }
+    func open(_ moduleId: String, _ entity: String) -> String {
+        let n = records.filter { rec in
+            rec.moduleId == moduleId && rec.entity == entity && (rec.status.lowercased().contains("pending") || rec.status.lowercased().contains("open") || rec.status.lowercased().contains("submitted"))
+        }.count
+        return "\(n)"
+    }
+    switch appId {
+    case "hr":
+        return [
+            Kpi(label: "People", value: count("payroll", "Employees"), hint: "Employees"),
+            Kpi(label: "Leave open", value: open("payroll", "Leave Requests"), hint: "Waiting"),
+            Kpi(label: "Payroll runs", value: count("payroll", "Payroll Runs"), hint: "Runs"),
+            Kpi(label: "Attendance", value: count("payroll", "Attendance"), hint: "Records"),
+        ]
+    case "finance":
+        return defaultKpis
+    case "sales":
+        return [
+            Kpi(label: "Customers", value: count("sales", "Customers"), hint: "Accounts"),
+            Kpi(label: "Invoices", value: count("sales", "Sales Invoices"), hint: "Sales invoices"),
+            Kpi(label: "Orders", value: count("sales", "Sales Orders"), hint: "Open book"),
+            Kpi(label: "Quotes", value: count("sales", "Sales Quotes"), hint: "Quotes"),
+        ]
+    case "crm":
+        return [
+            Kpi(label: "Leads", value: count("crm", "Leads"), hint: "Pipeline"),
+            Kpi(label: "Deals", value: count("crm", "Opportunities"), hint: "Opportunities"),
+            Kpi(label: "Accounts", value: count("crm", "Accounts"), hint: "Companies"),
+            Kpi(label: "Follow-ups", value: open("crm", "Follow-ups"), hint: "Open"),
+        ]
+    case "procurement":
+        return [
+            Kpi(label: "Orders", value: count("purchases", "Purchase Orders"), hint: "Purchase orders"),
+            Kpi(label: "Suppliers", value: count("purchases", "Suppliers"), hint: "Vendors"),
+            Kpi(label: "Receipts", value: count("purchases", "Goods Receipts"), hint: "Goods in"),
+            Kpi(label: "Stock lines", value: count("inventory", "Inventory Items"), hint: "Items"),
+        ]
+    case "projects":
+        return [
+            Kpi(label: "Projects", value: count("projects", "New Project"), hint: "Jobs"),
+            Kpi(label: "Materials", value: open("projects", "Material Requests"), hint: "Open"),
+            Kpi(label: "IPC", value: open("projects", "Payment Requests (IPC)"), hint: "Open"),
+            Kpi(label: "Programs", value: count("projects", "Work Programs"), hint: "Plans"),
+        ]
+    case "pos":
+        return [
+            Kpi(label: "Tickets", value: count("pos", "Open Tickets"), hint: "Open tickets"),
+            Kpi(label: "Sessions", value: count("pos", "Cash Sessions"), hint: "Shifts"),
+            Kpi(label: "Products", value: count("pos", "POS Products"), hint: "Menu"),
+            Kpi(label: "Closings", value: count("pos", "Daily Closings"), hint: "Day end"),
+        ]
+    case "production":
+        return [
+            Kpi(label: "Plans", value: count("production", "Production Plans"), hint: "Schedules"),
+            Kpi(label: "Batches", value: count("production", "Batch Records"), hint: "Batches"),
+            Kpi(label: "Machines", value: count("production", "Machines"), hint: "Plant"),
+            Kpi(label: "Yield", value: count("production", "Yield Reports"), hint: "Reports"),
+        ]
+    case "fleet":
+        return [
+            Kpi(label: "Vehicles", value: count("fleet", "Vehicles"), hint: "Fleet"),
+            Kpi(label: "Fuel", value: open("fleet", "Fuel Requests"), hint: "Open requests"),
+            Kpi(label: "Trips", value: open("fleet", "Trip Requests"), hint: "Open trips"),
+            Kpi(label: "Service", value: open("fleet", "Maintenance Requests"), hint: "Open jobs"),
+        ]
+    case "logistics":
+        return [
+            Kpi(label: "Shipments", value: count("logistics", "Shipments"), hint: "Loads"),
+            Kpi(label: "Dispatch", value: count("logistics", "Dispatch Board"), hint: "Board"),
+            Kpi(label: "Routes", value: count("logistics", "Routes"), hint: "Routes"),
+            Kpi(label: "Runs", value: count("distribution", "Delivery Runs"), hint: "Deliveries"),
+        ]
+    case "contracts":
+        return [
+            Kpi(label: "Contracts", value: count("contract-manager", "Contracts"), hint: "Live contracts"),
+            Kpi(label: "Contractors", value: count("contract-manager", "Contractors"), hint: "Parties"),
+            Kpi(label: "Invoices", value: count("contract-manager", "Contractor Invoices"), hint: "Bills"),
+            Kpi(label: "Bonds", value: count("contract-manager", "Performance Bonds"), hint: "Securities"),
+        ]
+    case "security":
+        return [
+            Kpi(label: "Gate", value: count("security", "Gate Passes"), hint: "Passes"),
+            Kpi(label: "Visitors", value: count("security", "Visitor Passes"), hint: "Visitors"),
+            Kpi(label: "Incidents", value: count("security", "Security Incidents"), hint: "Logged"),
+            Kpi(label: "Open", value: open("security", "Security Incidents"), hint: "Still open"),
+        ]
+    case "quality":
+        return [
+            Kpi(label: "Lab", value: count("lab", "Lab Requests"), hint: "Requests"),
+            Kpi(label: "Checks", value: count("qa", "Quality Checks"), hint: "QA"),
+            Kpi(label: "R&D", value: count("rnd", "Experiments"), hint: "Experiments"),
+            Kpi(label: "Systems", value: count("benchmark", "Work Systems"), hint: "Work systems"),
+        ]
+    case "requests":
+        return [
+            Kpi(label: "Requests", value: count("general-requests", "General Requests"), hint: "General"),
+            Kpi(label: "Open", value: open("general-requests", "General Requests"), hint: "Waiting"),
+            Kpi(label: "Oral pay", value: count("oral-payment-requests", "Oral Payment Requests"), hint: "Verbal"),
+            Kpi(label: "Oral open", value: open("oral-payment-requests", "Oral Payment Requests"), hint: "Waiting"),
+        ]
+    case "dms":
+        return [
+            Kpi(label: "Folders", value: count("folders", "Folders"), hint: "Folders"),
+            Kpi(label: "Cabinets", value: count("folders", "Cabinets"), hint: "Cabinets"),
+            Kpi(label: "Documents", value: count("documents", "Documents"), hint: "Files"),
+            Kpi(label: "Shares", value: count("documents", "Shares"), hint: "Shared"),
+        ]
+    default:
+        guard let app = suiteAppById(appId) else { return defaultKpis }
+        let scoped = records.filter { app.moduleIds.contains($0.moduleId) }
+        let openCount = scoped.filter { $0.status.lowercased().contains("pending") || $0.status.lowercased().contains("open") }.count
+        return [
+            Kpi(label: "Records", value: "\(scoped.count)", hint: app.label),
+            Kpi(label: "Open", value: "\(openCount)", hint: "Waiting"),
+            Kpi(label: "Desks", value: "\(app.moduleIds.count)", hint: "In this app"),
+            Kpi(label: "Types", value: "\(Set(scoped.map(\.entity)).count)", hint: "Record types"),
+        ]
+    }
+}
+
 public func defaultSuiteAppForRole(_ role: String?) -> String? {
     if isAdminRole(role) { return nil }
     if isContractorRole(role) { return "projects" }
@@ -401,6 +699,7 @@ public struct QuickAction: Equatable, Identifiable, Sendable {
     public var appId: String?
     public var moduleId: String
     public var entity: String?
+    public var section: String?
 
     public init(
         id: String,
@@ -410,7 +709,8 @@ public struct QuickAction: Equatable, Identifiable, Sendable {
         kind: QuickActionKind,
         appId: String? = nil,
         moduleId: String,
-        entity: String? = nil
+        entity: String? = nil,
+        section: String? = nil
     ) {
         self.id = id
         self.label = label
@@ -420,6 +720,7 @@ public struct QuickAction: Equatable, Identifiable, Sendable {
         self.appId = appId
         self.moduleId = moduleId
         self.entity = entity
+        self.section = section
     }
 }
 

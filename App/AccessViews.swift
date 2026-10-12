@@ -21,7 +21,7 @@ struct AccessView: View {
             }
         }
         .iagCanvas()
-        .iagBar("Access", subtitle: "More")
+        .iagBar("Access", subtitle: "Account")
         .task { await box.store.refreshDirectory() }
     }
 }
@@ -174,14 +174,20 @@ struct ProfileView: View {
                     Text(remote).font(.caption).foregroundStyle(.red)
                 }
 
-                Text("Profile").font(.subheadline.weight(.semibold))
+                PageStats(stats: [
+                    ("Role", user?.role ?? "—"),
+                    ("Apps", "\(box.store.visibleSuiteApps.count)"),
+                    ("Desks", "\(box.store.visibleModules.count)"),
+                    ("Clock", box.store.openAttendanceToday() == nil ? "Out" : "In"),
+                ])
+                SectionHeading(title: "Your details")
                 IagGrouped {
                     profileField("Name", text: $name)
-                    IagRowDivider()
+                    IagRowDivider(inset: 14)
                     profileField("Email", text: $email)
-                    IagRowDivider()
+                    IagRowDivider(inset: 14)
                     profileField("Phone", text: $phone)
-                    IagRowDivider()
+                    IagRowDivider(inset: 14)
                     profileField("Title", text: $title)
                 }
                 if let message {
@@ -201,7 +207,22 @@ struct ProfileView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(IagTheme.leaf)
 
-                Text("Preferences").font(.subheadline.weight(.semibold))
+                SectionHeading(title: "Workspace")
+                NavigationLink {
+                    MoreView()
+                } label: {
+                    DeskRow(title: "Workspace", subtitle: "Desks, requests, people, and admin", systemName: "square.grid.2x2", color: IagTheme.leaf)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+                .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(IagTheme.hairline, lineWidth: 0.5)
+                )
+
+                SectionHeading(title: "Preferences")
                 IagGrouped {
                     Button {
                         let next = box.store.themeMode == "system" ? "light" : box.store.themeMode == "light" ? "dark" : "system"
@@ -212,7 +233,7 @@ struct ProfileView: View {
                             .padding(.vertical, 12)
                     }
                     .buttonStyle(.plain)
-                    IagRowDivider()
+                    IagRowDivider(inset: 14)
                     Button(role: .destructive) { box.store.logout() } label: {
                         Text("Sign out")
                             .font(.subheadline.weight(.medium))

@@ -46,7 +46,10 @@ public final class ErpStore {
     public var roleName: String? { user?.role }
     public var isAdmin: Bool { isAdminRole(roleName) }
     public var currentRole: RoleDefinition? { roleOf(roleName) }
-    public var kpis: [Kpi] { defaultKpis }
+    public var kpis: [Kpi] {
+        guard let id = activeAppId else { return defaultKpis }
+        return kpisForApp(id, records: records)
+    }
     public var visibleModules: [ErpModule] { modules.filter { canAccessModule(roleName, $0.id, definition: currentRole) } }
     public var visibleSuiteApps: [SuiteApp] {
         suiteApps.filter { canOpenSuiteApp(roleName, $0.id, definition: currentRole) }
@@ -86,6 +89,36 @@ public final class ErpStore {
             }
             return allowsQuickAction(action)
         }.prefix(8))
+    }
+
+    /// Features of the open department, in the order that department keeps them.
+    public var departmentTools: [QuickAction] {
+        guard let app = activeSuiteApp else { return [] }
+        let home = defaultDepartmentForRole(roleName)
+        let modules = appModules.sorted { lhs, rhs in
+            (lhs.id == home ? 0 : 1) < (rhs.id == home ? 0 : 1)
+        }
+        var out: [QuickAction] = []
+        for module in modules where canOpen(module.id) {
+            let entities = module.entities.filter { entity in
+                entity != "Clock In" && entity != "My punches" && entity != "Punch Log"
+            }
+            let shown = entities.count > 12 ? Array(entities.prefix(8)) : entities
+            for entity in shown {
+                out.append(QuickAction(
+                    id: "feat:\(module.id):\(entity)",
+                    label: featureToolLabel(entity),
+                    icon: module.icon,
+                    color: module.color,
+                    kind: .list,
+                    appId: app.id,
+                    moduleId: module.id,
+                    entity: entity,
+                    section: module.label
+                ))
+            }
+        }
+        return out
     }
 
     public var launcherQuickActions: [QuickAction] {

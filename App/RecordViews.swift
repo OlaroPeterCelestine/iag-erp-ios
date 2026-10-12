@@ -12,13 +12,23 @@ struct DepartmentView: View {
         if let module = store.moduleById(moduleId), store.canOpen(moduleId) {
             let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             let entities = module.entities.filter { q.isEmpty || $0.lowercased().contains(q) }
+            let records = store.forModule(moduleId)
+            let open = records.filter { store.isOpenStatus($0.status) }.count
+            let value = records.compactMap(\.amount).reduce(0, +)
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    PageStats(stats: [
+                        ("Features", "\(module.entities.count)"),
+                        ("Records", "\(records.count)"),
+                        ("Open", "\(open)"),
+                        ("Value", value == 0 ? "—" : compactMoney(value)),
+                    ])
                     if !module.description.isEmpty {
                         Text(module.description)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    SectionHeading(title: "Features", detail: entities.isEmpty ? nil : "\(entities.count)")
                     if entities.isEmpty {
                         IagEmptyHint(text: "No features match.", systemName: "square.grid.2x2")
                             .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -34,7 +44,7 @@ struct DepartmentView: View {
                                 } label: {
                                     DeskRow(
                                         title: entity,
-                                        subtitle: "\(store.count(moduleId: moduleId, entity: entity)) records",
+                                        subtitle: featureLine(store, moduleId: moduleId, entity: entity),
                                         systemName: entityIcon(entity),
                                         color: iagColor(module.color)
                                     )
@@ -78,20 +88,24 @@ struct EntityListView: View {
                     || $0.subtitle.lowercased().contains(q)
                     || $0.status.lowercased().contains(q)
             }
+            let all = store.recordsFor(moduleId, entity)
+            let open = all.filter { store.isOpenStatus($0.status) }.count
+            let drafts = all.filter { $0.status.lowercased() == "draft" }.count
+            let value = all.compactMap(\.amount).reduce(0, +)
+            let snapshot = reportLines(for: entity)
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if moduleId == "reports" {
-                        Text("Snapshot").font(.subheadline.weight(.semibold))
-                        IagGrouped {
-                            ForEach(Array(reportLines(for: entity).enumerated()), id: \.element.0) { index, line in
-                                IagKeyValue(label: line.0, value: line.1)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 10)
-                                if index < reportLines(for: entity).count - 1 { IagRowDivider() }
-                            }
-                        }
+                        PageStats(stats: snapshot.prefix(4).map { (label: $0.0, value: $0.1) })
+                    } else {
+                        PageStats(stats: [
+                            ("Records", "\(all.count)"),
+                            ("Open", "\(open)"),
+                            ("Drafts", "\(drafts)"),
+                            ("Value", value == 0 ? "—" : compactMoney(value)),
+                        ])
                     }
-                    Text(entity).font(.subheadline.weight(.semibold))
+                    SectionHeading(title: "Records", detail: rows.isEmpty ? nil : "\(rows.count)")
                     if rows.isEmpty {
                         IagEmptyHint(text: "No \(entity.lowercased()) yet.", systemName: "tray")
                             .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -163,39 +177,26 @@ struct RecordDetailView: View {
         if let record = store.records.first(where: { $0.id == recordId }) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    IagGrouped {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                Text(record.entity)
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                StatusPill(text: record.status)
-                            }
-                            if let amount = record.amount {
-                                Text(formatMoney(amount))
-                                    .font(.title2.weight(.medium))
-                                    .monospacedDigit()
-                            }
-                            if !record.subtitle.isEmpty {
-                                Text(record.subtitle)
-                                    .font(.body)
-                            }
-                            Text(record.date)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(14)
+                    PageStats(stats: [
+                        ("Status", record.status),
+                        ("Date", record.date),
+                        ("Amount", record.amount.map(compactMoney) ?? "—"),
+                        ("Fields", "\(record.fields.count)"),
+                    ])
+                    if !record.subtitle.isEmpty {
+                        Text(record.subtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
                     if !record.fields.isEmpty {
-                        Text("Details").font(.subheadline.weight(.semibold))
-                        let fields = record.fields.sorted { $0.key < $1.key }
+                        SectionHeading(title: "Details", detail: record.entity)
+                        let fields = record.fields.sorted { prettyLabel($0.key) < prettyLabel($1.key) }
                         IagGrouped {
                             ForEach(Array(fields.enumerated()), id: \.element.key) { index, field in
-                                IagKeyValue(label: field.key, value: field.value)
+                                IagKeyValue(label: prettyLabel(field.key), value: field.value)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 10)
-                                if index < fields.count - 1 { IagRowDivider() }
+                                if index < fields.count - 1 { IagRowDivider(inset: 14) }
                             }
                         }
                     }
@@ -291,12 +292,18 @@ struct RecordFormView: View {
                     IagEmptyHint(text: "Your role cannot create this record.", systemName: "lock")
                         .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 } else {
+                    PageStats(stats: [
+                        ("Desk", box.store.moduleById(moduleId)?.label ?? "Record"),
+                        ("Type", entity),
+                        ("Status", "Draft"),
+                        ("Amount", amount.isEmpty ? "—" : (Double(amount).map(compactMoney) ?? amount)),
+                    ])
                     IagGrouped {
-                        formField("Title", text: $title)
-                        IagRowDivider()
-                        formField("Subtitle", text: $subtitle)
-                        IagRowDivider()
-                        formField("Amount (UGX)", text: $amount, numeric: true)
+                        formField("Reference", text: $title, prompt: "Name or number")
+                        IagRowDivider(inset: 14)
+                        formField("Note", text: $subtitle, prompt: "Who, where, or why")
+                        IagRowDivider(inset: 14)
+                        formField("Amount", text: $amount, prompt: "UGX", numeric: true)
                     }
                     if let error {
                         Text(error).font(.caption).foregroundStyle(.red)
@@ -315,15 +322,15 @@ struct RecordFormView: View {
         }
         .scrollIndicators(.hidden)
         .background(IagTheme.canvas.ignoresSafeArea())
-        .iagBar("New \(entity)")
+        .iagBar("New \(entity)", subtitle: box.store.moduleById(moduleId)?.label)
     }
 
-    private func formField(_ label: String, text: Binding<String>, numeric: Bool = false) -> some View {
+    private func formField(_ label: String, text: Binding<String>, prompt: String, numeric: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.caption)
+                .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
-            TextField(label, text: text)
+            TextField(prompt, text: text)
                 .font(.subheadline)
                 .keyboardType(numeric ? .decimalPad : .default)
         }
@@ -333,7 +340,7 @@ struct RecordFormView: View {
 
     private func save() {
         if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            error = "Title is required."
+            error = "Add a reference."
             return
         }
         box.store.addRecord(ErpRecord(
@@ -348,4 +355,12 @@ struct RecordFormView: View {
         ))
         dismiss()
     }
+}
+
+private func featureLine(_ store: ErpStore, moduleId: String, entity: String) -> String {
+    let rows = store.recordsFor(moduleId, entity)
+    if rows.isEmpty { return "No records yet" }
+    let open = rows.filter { store.isOpenStatus($0.status) }.count
+    if open > 0 { return "\(rows.count) records · \(open) open" }
+    return "\(rows.count) records"
 }

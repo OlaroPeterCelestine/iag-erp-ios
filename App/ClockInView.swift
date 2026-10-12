@@ -74,8 +74,15 @@ struct ClockInView: View {
             guard let lat = gps.latitude, let lng = gps.longitude else { return nil }
             return verifyAgainstZones(GeoPoint(latitude: lat, longitude: lng), store.geofenceZones(), accuracyMeters: gps.accuracy)
         }()
+        let punches = store.myPunches()
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                PageStats(stats: [
+                    ("Status", open == nil ? "Out" : "In"),
+                    ("Punches", "\(punches.count)"),
+                    ("Site", check?.status ?? "—"),
+                    ("GPS", gps.latitude == nil ? "Off" : "\(Int(gps.accuracy.rounded())) m"),
+                ])
                 IagGrouped {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(alignment: .center, spacing: 12) {
@@ -135,7 +142,7 @@ struct ClockInView: View {
                     .padding(14)
                 }
 
-                Text("Location").font(.subheadline.weight(.semibold))
+                SectionHeading(title: "Where you are", detail: check?.status)
                 IagGrouped {
                     if let lat = gps.latitude, let lng = gps.longitude {
                         IagKeyValue(label: "GPS", value: String(format: "%.5f, %.5f", lat, lng))
@@ -183,8 +190,7 @@ struct ClockInView: View {
                     }
                 }
 
-                Text("My punches").font(.subheadline.weight(.semibold))
-                let punches = store.myPunches()
+                SectionHeading(title: "Punches", detail: punches.isEmpty ? nil : "\(punches.count)")
                 if punches.isEmpty {
                     IagEmptyHint(text: "No punches yet.", systemName: "clock")
                         .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -214,12 +220,154 @@ struct ClockInView: View {
         }
         .scrollIndicators(.hidden)
         .background(IagTheme.canvas.ignoresSafeArea())
-        .iagBar("Clock In", subtitle: appName)
+        .iagBar("Clock In", subtitle: box.store.activeSuiteApp?.label ?? box.store.user?.role ?? appName)
         .onAppear { gps.refresh() }
         .task {
             await box.store.refreshEntity("payroll", "Sites")
             await box.store.refreshEntity("payroll", "Blocks")
             await box.store.refreshEntity("payroll", "Attendance")
         }
+    }
+}
+
+struct AttendanceCalendarView: View {
+    @EnvironmentObject var box: StoreBox
+    @State private var anchor = Date()
+    @State private var selected = Date()
+
+    var body: some View {
+        let store = box.store
+        let _ = box.tick
+        let punches = store.myPunches()
+        let calendar = Calendar.current
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: anchor)) ?? anchor
+        let dayCount = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
+        let leading = calendar.component(.weekday, from: monthStart) - 1
+        let days = (1...dayCount).compactMap { calendar.date(byAdding: .day, value: $0 - 1, to: monthStart) }
+        let selectedKey = isoDay(selected)
+        let selectedPunch = punches.first { $0.date == selectedKey }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Button { shiftMonth(-1) } label: { Image(systemName: "chevron.left").frame(width: 32, height: 32) }
+                        .buttonStyle(.plain)
+                    Spacer()
+                    VStack(spacing: 2) {
+                        Text(monthStart.formatted(.dateTime.month(.wide).year()))
+                            .font(.subheadline.weight(.semibold))
+                        Text(store.user?.role ?? store.activeSuiteApp?.label ?? appName)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button { shiftMonth(1) } label: { Image(systemName: "chevron.right").frame(width: 32, height: 32) }
+                        .buttonStyle(.plain)
+                }
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 8) {
+                    ForEach(Array(["S", "M", "T", "W", "T", "F", "S"].enumerated()), id: \.offset) { _, label in
+                        Text(label)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                    }
+                    ForEach(0..<leading, id: \.self) { _ in
+                        Color.clear.frame(height: 40)
+                    }
+                    ForEach(days, id: \.timeIntervalSince1970) { day in
+                        let mark = dayMark(day, punches: punches)
+                        Button { selected = day } label: {
+                            VStack(spacing: 4) {
+                                Text("\(calendar.component(.day, from: day))")
+                                    .font(.caption.weight(calendar.isDateInToday(day) ? .bold : .regular))
+                                    .foregroundStyle(calendar.isDate(day, inSameDayAs: selected) ? IagTheme.onLeaf : .primary)
+                                Circle()
+                                    .fill(markColor(mark))
+                                    .frame(width: 6, height: 6)
+                                    .opacity(mark.isEmpty ? 0 : 1)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 40)
+                            .background(
+                                calendar.isDate(day, inSameDayAs: selected) ? IagTheme.leaf : Color.clear,
+                                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(12)
+                .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(IagTheme.hairline, lineWidth: 0.5))
+                HStack(spacing: 12) {
+                    legendDot("Present", IagTheme.leaf)
+                    legendDot("Leave", IagTheme.leaf.opacity(0.45))
+                    legendDot("Absent", .red.opacity(0.7))
+                    legendDot("Off", .secondary.opacity(0.45))
+                }
+                IagGrouped {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(selected.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
+                            .font(.subheadline.weight(.semibold))
+                        Text(dayMark(selected, punches: punches).isEmpty ? "No attendance yet." : dayMark(selected, punches: punches))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if let selectedPunch {
+                            Text("\(recordField(selectedPunch, "clockIn", "Clock in")) – \(recordField(selectedPunch, "clockOut", "Clock out"))")
+                                .font(.caption)
+                            if !recordField(selectedPunch, "site", "Site").isEmpty {
+                                Text(recordField(selectedPunch, "site", "Site"))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .iagPage()
+        }
+        .scrollIndicators(.hidden)
+        .background(IagTheme.canvas.ignoresSafeArea())
+        .iagBar("Calendar", subtitle: store.activeSuiteApp?.label ?? store.user?.role ?? appName)
+    }
+
+    private func shiftMonth(_ delta: Int) {
+        anchor = Calendar.current.date(byAdding: .month, value: delta, to: anchor) ?? anchor
+    }
+
+    private func legendDot(_ title: String, _ color: Color) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(color).frame(width: 6, height: 6)
+            Text(title).font(.caption2).foregroundStyle(.secondary)
+        }
+    }
+}
+
+private func isoDay(_ date: Date) -> String {
+    let c = Calendar.current
+    return String(format: "%04d-%02d-%02d", c.component(.year, from: date), c.component(.month, from: date), c.component(.day, from: date))
+}
+
+private func dayMark(_ date: Date, punches: [ErpRecord]) -> String {
+    let key = isoDay(date)
+    if let punch = punches.first(where: { $0.date == key }) {
+        let status = punch.status.lowercased()
+        if status.contains("leave") { return "Leave" }
+        return "Present"
+    }
+    let calendar = Calendar.current
+    let weekday = calendar.component(.weekday, from: date)
+    if weekday == 1 || weekday == 7 { return "Off" }
+    if calendar.startOfDay(for: date) < calendar.startOfDay(for: Date()) { return "Absent" }
+    return ""
+}
+
+private func markColor(_ mark: String) -> Color {
+    switch mark {
+    case "Present": return IagTheme.leaf
+    case "Leave": return IagTheme.leaf.opacity(0.45)
+    case "Absent": return .red.opacity(0.7)
+    case "Off": return .secondary.opacity(0.45)
+    default: return .clear
     }
 }
