@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 import ErpCore
 
 struct DepartmentView: View {
@@ -28,6 +29,17 @@ struct DepartmentView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    if moduleId == "distribution" {
+                        NavigationLink {
+                            OperationsMapView(moduleId: "distribution")
+                        } label: {
+                            DeskRow(title: "Map", subtitle: "Delivery stops", systemName: "map.fill", color: iagColor(module.color))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
                     SectionHeading(title: "Features", detail: entities.isEmpty ? nil : "\(entities.count)")
                     if entities.isEmpty {
                         IagEmptyHint(text: "No features match.", systemName: "square.grid.2x2")
@@ -38,6 +50,8 @@ struct DepartmentView: View {
                                 NavigationLink {
                                     if entity == "Clock In" {
                                         ClockInView()
+                                    } else if entity == "Map Analytics" {
+                                        OperationsMapView(moduleId: moduleId)
                                     } else {
                                         EntityListView(moduleId: moduleId, entity: entity)
                                     }
@@ -187,6 +201,15 @@ struct RecordDetailView: View {
                         Text(record.subtitle)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                    }
+                    if let point = coordinate(for: record), record.moduleId == "fleet" || record.moduleId == "distribution" {
+                        PinMap(
+                            pins: [PlacePin(id: record.id, title: record.title, subtitle: record.subtitle, status: record.status, latitude: point.latitude, longitude: point.longitude)],
+                            systemImage: record.moduleId == "fleet" ? "car.fill" : "box.truck.fill",
+                            tint: record.moduleId == "fleet" ? IagTheme.orange : IagTheme.success
+                        )
+                        .frame(height: 180)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
                     if !record.fields.isEmpty {
                         SectionHeading(title: "Details", detail: record.entity)

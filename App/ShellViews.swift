@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 import ErpCore
 
 private struct ShellTabKey: EnvironmentKey {
@@ -55,6 +56,10 @@ struct ShellView: View {
             NavigationStack { AttendanceCalendarView() }
         case "approvals":
             ApprovalsView()
+        case "map":
+            NavigationStack {
+                OperationsMapView(moduleId: spec.moduleId ?? "fleet")
+            }
         default:
             NavigationStack {
                 if let moduleId = spec.moduleId, let entity = spec.entity {
@@ -89,7 +94,7 @@ struct FinHome: View {
     var viewAllModule: String? = nil
     var viewAllDesks: Bool = false
 
-    private var frequentApps: [SuiteApp] { Array(apps.prefix(8)) }
+    private var frequentApps: [SuiteApp] { apps }
 
     var body: some View {
         ScrollView {
@@ -352,11 +357,11 @@ struct FinHome: View {
 
     private var frequents: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(frequentApps.isEmpty ? "Jump back" : "Your apps")
+            Text(frequentApps.isEmpty ? "Jump back" : "Systems")
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 14) {
+            if !frequentApps.isEmpty {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 14) {
                     ForEach(frequentApps) { app in
                         Button {
                             onOpenApp(app.id)
@@ -376,11 +381,18 @@ struct FinHome: View {
                                     .foregroundStyle(.primary)
                                     .multilineTextAlignment(.center)
                                     .lineLimit(2)
-                                    .frame(width: 64)
+                                    .minimumScaleFactor(0.8)
+                                    .frame(height: 28)
                             }
+                            .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.plain)
                     }
+                }
+            }
+            if !recents.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
                     ForEach(recents, id: \.id) { rec in
                         NavigationLink {
                             RecordDetailView(recordId: rec.id)
@@ -405,6 +417,7 @@ struct FinHome: View {
                         .buttonStyle(.plain)
                     }
                 }
+            }
             }
         }
     }
@@ -652,6 +665,101 @@ private func noticeIcon(_ status: String) -> String {
     return "bell"
 }
 
+struct OperationsMapView: View {
+    @EnvironmentObject var box: StoreBox
+    var moduleId: String
+    @State private var selected: String?
+
+    private var isFleet: Bool { moduleId == "fleet" }
+
+    var body: some View {
+        let _ = box.tick
+        let pins = isFleet ? fleetMapPins(box.store.records) : distributionMapPins(box.store.records)
+        let tint = isFleet ? IagTheme.orange : IagTheme.success
+        VStack(spacing: 0) {
+            PinMap(pins: pins, systemImage: isFleet ? "car.fill" : "box.truck.fill", tint: tint, selected: $selected)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if pins.isEmpty {
+                        IagEmptyHint(text: isFleet ? "No vehicles are reporting a position." : "No delivery stops have a position yet.", systemName: "mappin.slash")
+                            .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    } else {
+                        IagGrouped {
+                            ForEach(Array(pins.enumerated()), id: \.element.id) { index, pin in
+                                NavigationLink {
+                                    RecordDetailView(recordId: pin.id)
+                                } label: {
+                                    DeskRow(title: pin.title, subtitle: pin.subtitle, systemName: isFleet ? "car.fill" : "box.truck.fill", color: tint, status: pin.status)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                }
+                                .buttonStyle(.plain)
+                                if index < pins.count - 1 { IagRowDivider() }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+            .frame(maxHeight: 280)
+            .background(IagTheme.canvas)
+        }
+        .background(IagTheme.canvas.ignoresSafeArea())
+        .iagBar(isFleet ? "Fleet map" : "Distribution map", subtitle: isFleet ? "Vehicles" : "Delivery stops")
+    }
+}
+
+struct PinMap: View {
+    var pins: [PlacePin]
+    var systemImage: String
+    var tint: Color
+    var selected: Binding<String?> = .constant(nil)
+    @State private var position: MapCameraPosition = .automatic
+
+    var body: some View {
+        Map(position: $position, selection: selected) {
+            ForEach(pins) { pin in
+                Marker(pin.title, systemImage: systemImage, coordinate: CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude))
+                    .tint(tint)
+                    .tag(pin.id)
+            }
+        }
+        .mapStyle(.standard)
+        .onAppear { position = .region(mapRegion(pins)) }
+        .onChange(of: selected.wrappedValue) { _, id in
+            guard let id, let pin = pins.first(where: { $0.id == id }) else { return }
+            position = .region(MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude),
+                span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
+            ))
+        }
+    }
+}
+
+private func mapRegion(_ pins: [PlacePin]) -> MKCoordinateRegion {
+    guard let first = pins.first else {
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: hqLatitude, longitude: hqLongitude),
+            span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
+        )
+    }
+    let lats = pins.map(\.latitude)
+    let lngs = pins.map(\.longitude)
+    let minLat = lats.min() ?? first.latitude
+    let maxLat = lats.max() ?? first.latitude
+    let minLng = lngs.min() ?? first.longitude
+    let maxLng = lngs.max() ?? first.longitude
+    return MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2, longitude: (minLng + maxLng) / 2),
+        span: MKCoordinateSpan(
+            latitudeDelta: max(0.12, (maxLat - minLat) * 1.8),
+            longitudeDelta: max(0.12, (maxLng - minLng) * 1.8)
+        )
+    )
+}
+
 struct ApprovalsView: View {
     var body: some View {
         NavigationStack {
@@ -724,6 +832,9 @@ struct QuickActionOpener<Label: View>: View {
         case .approvals:
             NavigationLink { ApprovalsList() } label: { label() }
                 .buttonStyle(.plain)
+        case .map:
+            NavigationLink { OperationsMapView(moduleId: action.moduleId) } label: { label() }
+                .buttonStyle(.plain)
         default:
             NavigationLink { QuickActionDestination(action: action) } label: { label() }
                 .buttonStyle(.plain)
@@ -740,6 +851,8 @@ struct QuickActionDestination: View {
             ClockInView()
         case .approvals:
             ApprovalsList()
+        case .map:
+            OperationsMapView(moduleId: action.moduleId)
         case .access:
             AccessView()
         case .create:

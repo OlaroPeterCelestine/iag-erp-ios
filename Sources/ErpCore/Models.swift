@@ -309,21 +309,23 @@ public struct SuiteApp: Equatable, Identifiable, Sendable {
 }
 
 public let suiteApps: [SuiteApp] = [
-    SuiteApp(id: "finance", label: "Finance", description: "Banking, receipts, claims, accounts, reports, assets, capital, and investments.", moduleIds: ["banking", "receipts-payments", "expense-claims", "accounts", "reports", "investments", "assets", "capital"], icon: "banknote", color: 0xFF0369A1),
-    SuiteApp(id: "sales", label: "Sales", description: "Customers, quotes, orders, invoices, and credit notes.", moduleIds: ["sales"], icon: "storefront", color: 0xFF059669),
+    SuiteApp(id: "contracts", label: "Contract Manager", description: "Contracts, contractors, amendments, invoices, and bonds.", moduleIds: ["contract-manager"], icon: "doc.badge.checkmark", color: 0xFF047857),
     SuiteApp(id: "crm", label: "CRM", description: "Leads, accounts, opportunities, follow-ups, and complaints.", moduleIds: ["crm"], icon: "person.3", color: 0xFFBE123C),
-    SuiteApp(id: "pos", label: "POS", description: "Tills, tickets, KOTs, cash sessions, and daily closings.", moduleIds: ["pos"], icon: "creditcard", color: 0xFF0F766E),
-    SuiteApp(id: "procurement", label: "Procurement", description: "Suppliers, purchase documents, goods receipts, and inventory.", moduleIds: ["purchases", "inventory"], icon: "cart", color: 0xFF2563EB),
+    SuiteApp(id: "dms", label: "Distribution", description: "Documents, cabinets, folders, versions, and file shares.", moduleIds: ["folders", "documents"], icon: "folder.fill", color: 0xFFA16207),
+    SuiteApp(id: "sales", label: "ERP", description: "Customers, quotes, orders, invoices, and credit notes.", moduleIds: ["sales"], icon: "storefront", color: 0xFF059669),
+    SuiteApp(id: "finance", label: "Finance", description: "Banking, receipts, claims, accounts, reports, assets, capital, and investments.", moduleIds: ["banking", "receipts-payments", "expense-claims", "accounts", "reports", "investments", "assets", "capital"], icon: "banknote", color: 0xFF0369A1),
+    SuiteApp(id: "fleet", label: "Fleet", description: "HAULA. Vehicles, drivers, fuel, trips, maintenance, and the fleet map.", moduleIds: ["fleet"], icon: "car.fill", color: 0xFFD97706),
+    SuiteApp(id: "hr", label: "HR", description: "Employees, attendance, leave, payroll runs, and payslips.", moduleIds: ["payroll"], icon: "person.2", color: 0xFF7C3AED),
+    SuiteApp(id: "inventory", label: "Inventory", description: "Items, warehouses, stock movements, and stocktakes.", moduleIds: ["inventory"], icon: "cube.box", color: 0xFF0E7490),
+    SuiteApp(id: "lab", label: "Lab", description: "Lab requests, samples, trials, results, and stability.", moduleIds: ["lab"], icon: "testtube.2", color: 0xFF6D28D9),
+    SuiteApp(id: "logistics", label: "Logistics", description: "Shipments, dispatch, routes, and delivery runs.", moduleIds: ["logistics", "distribution"], icon: "shippingbox", color: 0xFF0F766E),
+    SuiteApp(id: "pos", label: "BurrP!", description: "Tills, tickets, KOTs, cash sessions, and daily closings.", moduleIds: ["pos"], icon: "creditcard", color: 0xFF0F766E),
+    SuiteApp(id: "procurement", label: "Procurement", description: "Suppliers, purchase documents, and goods receipts.", moduleIds: ["purchases"], icon: "cart", color: 0xFF2563EB),
     SuiteApp(id: "production", label: "Production", description: "Plans, machines, batches, roast, packaging, downtime, and yield.", moduleIds: ["production"], icon: "gearshape.2", color: 0xFFB45309),
-    SuiteApp(id: "fleet", label: "Fleet", description: "Vehicles, drivers, fuel, trips, and maintenance.", moduleIds: ["fleet"], icon: "car.fill", color: 0xFFD97706),
-    SuiteApp(id: "logistics", label: "Logistics", description: "Shipments, dispatch, routes, distribution, and deliveries.", moduleIds: ["logistics", "distribution"], icon: "shippingbox", color: 0xFF0F766E),
-    SuiteApp(id: "projects", label: "Projects", description: "Projects, Gantt, IPC, materials, and work programs.", moduleIds: ["projects"], icon: "briefcase", color: 0xFF4F46E5),
-    SuiteApp(id: "contracts", label: "Contract Management", description: "Contracts, contractors, amendments, invoices, and bonds.", moduleIds: ["contract-manager"], icon: "doc.badge.checkmark", color: 0xFF047857),
-    SuiteApp(id: "hr", label: "HR & Payroll", description: "Employees, attendance, leave, payroll runs, and payslips.", moduleIds: ["payroll"], icon: "person.2", color: 0xFF7C3AED),
+    SuiteApp(id: "projects", label: "Project Manager", description: "Projects, Gantt, IPC, materials, and work programs.", moduleIds: ["projects"], icon: "briefcase", color: 0xFF4F46E5),
     SuiteApp(id: "security", label: "Security", description: "Gate passes, visitor passes, and security incidents.", moduleIds: ["security"], icon: "shield.checkered", color: 0xFF334155),
-    SuiteApp(id: "quality", label: "Quality", description: "R&D, lab, QA, and work-system benchmarks.", moduleIds: ["rnd", "lab", "qa", "benchmark"], icon: "flask", color: 0xFF6D28D9),
+    SuiteApp(id: "quality", label: "Quality", description: "QA, R&D, and work-system benchmarks.", moduleIds: ["qa", "rnd", "benchmark"], icon: "checkmark.seal", color: 0xFF0369A1),
     SuiteApp(id: "requests", label: "Requests", description: "General and oral payment requests through the approval desks.", moduleIds: ["general-requests", "oral-payment-requests"], icon: "list.clipboard", color: 0xFF7C3AED),
-    SuiteApp(id: "dms", label: "DMS", description: "Cabinets, folders, documents, versions, and file shares.", moduleIds: ["folders", "documents"], icon: "folder.fill", color: 0xFFA16207),
 ]
 
 public func suiteAppById(_ id: String?) -> SuiteApp? {
@@ -341,20 +343,9 @@ public func suiteAppContaining(_ moduleId: String) -> SuiteApp? {
     suiteApps.first { $0.moduleIds.contains(moduleId) }
 }
 
-/// Built-in roles only open their own department. Nil means the role is not department-locked
-/// (administrators, and custom roles that use the page matrix).
+/// One sign-in reaches every system the role's module rights allow.
 public func roleDepartmentApps(_ role: String?, definition: RoleDefinition? = nil) -> Set<String>? {
-    if isAdminRole(role) || isAdminRole(definition?.name) { return nil }
-    if let definition, !definition.system { return nil }
-    if isContractorRole(role) { return ["projects", "contracts"] }
-    switch normalizeRole(role) {
-    case "quantity surveyor", "project manager": return ["projects"]
-    case "procurement", "stores manager": return ["procurement"]
-    case "hr", "human resources", "department head": return ["hr"]
-    case "accountant", "accounts assistant", "accounts", "finance", "clerk", "viewer": return ["finance"]
-    case "general manager", "ceo", "reviewer", "approver": return ["requests"]
-    default: return nil
-    }
+    nil
 }
 
 public func roleMaySeeModule(_ role: String?, _ moduleId: String, definition: RoleDefinition? = nil) -> Bool {
@@ -473,7 +464,13 @@ private func appFeatureTabs(_ appId: String) -> [ShellTabSpec] {
             appTab("orders", "Orders", "cart", "purchases", "Purchase Orders"),
             appTab("suppliers", "Suppliers", "person.2", "purchases", "Suppliers"),
             appTab("receipts", "Receipts", "shippingbox", "purchases", "Goods Receipts"),
-            appTab("stock", "Stock", "cube.box", "inventory"),
+        ]
+    case "inventory":
+        return [
+            appTab("items", "Items", "cube.box", "inventory", "Inventory Items"),
+            appTab("warehouses", "Stores", "building.2", "inventory", "Warehouses & Locations"),
+            appTab("transfers", "Transfers", "arrow.left.arrow.right", "inventory", "Inventory Transfers"),
+            appTab("stocktakes", "Counts", "list.clipboard", "inventory", "Stocktakes"),
         ]
     case "production":
         return [
@@ -484,17 +481,19 @@ private func appFeatureTabs(_ appId: String) -> [ShellTabSpec] {
         ]
     case "fleet":
         return [
+            appTab("map", "Map", "map.fill", "fleet"),
             appTab("vehicles", "Vehicles", "car.fill", "fleet", "Vehicles"),
             appTab("fuel", "Fuel", "fuelpump", "fleet", "Fuel Logs"),
-            appTab("trips", "Trips", "map", "fleet", "Trip Requests"),
+            appTab("trips", "Trips", "signpost.right", "fleet", "Trip Requests"),
             appTab("maintenance", "Service", "wrench", "fleet", "Maintenance Requests"),
         ]
     case "logistics":
         return [
+            appTab("map", "Map", "map.fill", "distribution"),
+            appTab("runs", "Runs", "box.truck", "distribution", "Delivery Runs"),
             appTab("shipments", "Shipments", "shippingbox", "logistics", "Shipments"),
             appTab("dispatch", "Dispatch", "arrow.triangle.branch", "logistics", "Dispatch Board"),
-            appTab("routes", "Routes", "map", "logistics", "Routes"),
-            appTab("runs", "Runs", "box.truck", "distribution", "Delivery Runs"),
+            appTab("routes", "Routes", "signpost.right", "logistics", "Routes"),
         ]
     case "projects":
         return [
@@ -518,10 +517,16 @@ private func appFeatureTabs(_ appId: String) -> [ShellTabSpec] {
         ]
     case "quality":
         return [
-            appTab("lab", "Lab", "testtube.2", "lab"),
             appTab("qa", "QA", "checkmark.seal", "qa"),
             appTab("rnd", "R&D", "flask", "rnd"),
             appTab("benchmark", "Systems", "chart.bar", "benchmark"),
+        ]
+    case "lab":
+        return [
+            appTab("requests", "Requests", "testtube.2", "lab", "Lab Requests"),
+            appTab("samples", "Samples", "drop", "lab", "Lab Samples"),
+            appTab("results", "Results", "checkmark.seal", "lab", "Lab Results"),
+            appTab("trials", "Trials", "flask", "lab", "Lab Trials"),
         ]
     case "requests":
         return [
@@ -582,7 +587,14 @@ public func kpisForApp(_ appId: String, records: [ErpRecord]) -> [Kpi] {
             Kpi(label: "Orders", value: count("purchases", "Purchase Orders"), hint: "Purchase orders"),
             Kpi(label: "Suppliers", value: count("purchases", "Suppliers"), hint: "Vendors"),
             Kpi(label: "Receipts", value: count("purchases", "Goods Receipts"), hint: "Goods in"),
-            Kpi(label: "Stock lines", value: count("inventory", "Inventory Items"), hint: "Items"),
+            Kpi(label: "Open", value: open("purchases", "Purchase Orders"), hint: "Waiting"),
+        ]
+    case "inventory":
+        return [
+            Kpi(label: "Items", value: count("inventory", "Inventory Items"), hint: "Stock items"),
+            Kpi(label: "Warehouses", value: count("inventory", "Warehouses & Locations"), hint: "Locations"),
+            Kpi(label: "Transfers", value: count("inventory", "Inventory Transfers"), hint: "Moves"),
+            Kpi(label: "Counts", value: count("inventory", "Stocktakes"), hint: "Stocktakes"),
         ]
     case "projects":
         return [
@@ -635,10 +647,17 @@ public func kpisForApp(_ appId: String, records: [ErpRecord]) -> [Kpi] {
         ]
     case "quality":
         return [
-            Kpi(label: "Lab", value: count("lab", "Lab Requests"), hint: "Requests"),
             Kpi(label: "Checks", value: count("qa", "Quality Checks"), hint: "QA"),
+            Kpi(label: "Incoming", value: count("qa", "Incoming Inspections"), hint: "Inspections"),
             Kpi(label: "R&D", value: count("rnd", "Experiments"), hint: "Experiments"),
             Kpi(label: "Systems", value: count("benchmark", "Work Systems"), hint: "Work systems"),
+        ]
+    case "lab":
+        return [
+            Kpi(label: "Requests", value: count("lab", "Lab Requests"), hint: "Lab"),
+            Kpi(label: "Samples", value: count("lab", "Lab Samples"), hint: "Samples"),
+            Kpi(label: "Results", value: count("lab", "Lab Results"), hint: "Results"),
+            Kpi(label: "Trials", value: count("lab", "Lab Trials"), hint: "Trials"),
         ]
     case "requests":
         return [
@@ -740,7 +759,7 @@ public let workspaceTools: [WorkspaceTool] = [
 ]
 
 public enum QuickActionKind: String, Sendable {
-    case create, list, clock, approvals, access
+    case create, list, clock, approvals, access, map
 }
 
 public struct QuickAction: Equatable, Identifiable, Sendable {
@@ -790,7 +809,7 @@ public let quickActionCatalog: [QuickAction] = [
     QuickAction(id: "po", label: "New PO", icon: "cart.fill", color: 0xFF2563EB, kind: .create, appId: "procurement", moduleId: "purchases", entity: "Purchase Orders"),
     QuickAction(id: "grn", label: "GRN", icon: "shippingbox", color: 0xFF0E7490, kind: .create, appId: "procurement", moduleId: "purchases", entity: "Goods Receipts"),
     QuickAction(id: "supplier", label: "Supplier", icon: "person.2", color: 0xFF2563EB, kind: .create, appId: "procurement", moduleId: "purchases", entity: "Suppliers"),
-    QuickAction(id: "item", label: "Item", icon: "cube.box", color: 0xFF0E7490, kind: .create, appId: "procurement", moduleId: "inventory", entity: "Inventory Items"),
+    QuickAction(id: "item", label: "Item", icon: "cube.box", color: 0xFF0E7490, kind: .create, appId: "inventory", moduleId: "inventory", entity: "Inventory Items"),
     QuickAction(id: "prod-order", label: "Order", icon: "gearshape.2", color: 0xFFB45309, kind: .create, appId: "production", moduleId: "production", entity: "Production Orders"),
     QuickAction(id: "batch", label: "Batch", icon: "square.stack.3d.up", color: 0xFFB45309, kind: .create, appId: "production", moduleId: "production", entity: "Batch Records"),
     QuickAction(id: "roast", label: "Roast", icon: "flame", color: 0xFFC2410C, kind: .create, appId: "production", moduleId: "production", entity: "Roast Batches"),
@@ -821,7 +840,7 @@ public let quickActionCatalog: [QuickAction] = [
     QuickAction(id: "shipment", label: "Ship", icon: "shippingbox.fill", color: 0xFF0F766E, kind: .create, appId: "logistics", moduleId: "logistics", entity: "Shipments"),
     QuickAction(id: "dispatch", label: "Dispatch", icon: "list.bullet.rectangle", color: 0xFF0F766E, kind: .list, appId: "logistics", moduleId: "logistics", entity: "Dispatch Board"),
     QuickAction(id: "delivery", label: "Deliver", icon: "bicycle", color: 0xFF0D9488, kind: .create, appId: "logistics", moduleId: "distribution", entity: "Delivery Runs"),
-    QuickAction(id: "lab", label: "Lab", icon: "testtube.2", color: 0xFF6D28D9, kind: .create, appId: "quality", moduleId: "lab", entity: "Lab Requests"),
+    QuickAction(id: "lab", label: "Lab", icon: "testtube.2", color: 0xFF6D28D9, kind: .create, appId: "lab", moduleId: "lab", entity: "Lab Requests"),
     QuickAction(id: "qa", label: "QA", icon: "checkmark.seal", color: 0xFF0369A1, kind: .create, appId: "quality", moduleId: "qa", entity: "Quality Checks"),
     QuickAction(id: "nc", label: "NC", icon: "xmark.octagon", color: 0xFFB91C1C, kind: .create, appId: "quality", moduleId: "qa", entity: "Non-conformances"),
     QuickAction(id: "gen-request", label: "Request", icon: "list.clipboard", color: 0xFF7C3AED, kind: .create, appId: "requests", moduleId: "general-requests", entity: "General Requests"),

@@ -43,7 +43,9 @@ public func erpModules() -> [ErpModule] {
             seedRecord(module: "contract-manager", entity: "Contractor Invoices", title: "CINV-2026-008", subtitle: "Certificate 2", status: "Pending", amount: 48_000_000),
         ]),
         ErpModule(id: "fleet", label: "Fleet", group: "Operations", description: "Vehicles, drivers, fuel, trips, maintenance, map analytics, and fleet cost.", icon: "car.fill", color: 0xFFD97706, entities: ["Vehicles", "Drivers", "Fuel Requests", "Fuel Logs", "Trip Requests", "Maintenance Requests", "Map Analytics", "Service Reminders", "Fleet Cost Report"], approvalEntities: ["Fuel Requests", "Trip Requests", "Maintenance Requests"], seed: [
-            seedRecord(module: "fleet", entity: "Vehicles", title: "UAX 221K", subtitle: "Isuzu NPR", status: "Active"),
+            seedRecord(module: "fleet", entity: "Vehicles", title: "UAX 221K", subtitle: "Isuzu NPR · Namanve", status: "Active", fields: ["location": "Namanve", "latitude": "0.385300", "longitude": "32.684700", "speedKmh": "0", "driver": "Joseph Ssewanyana"]),
+            seedRecord(module: "fleet", entity: "Vehicles", title: "UBE 104M", subtitle: "Toyota Hilux · Kololo", status: "Active", fields: ["location": "Kololo", "latitude": "0.330600", "longitude": "32.589400", "speedKmh": "28", "driver": "Amina Nakato"]),
+            seedRecord(module: "fleet", entity: "Vehicles", title: "UAV 778C", subtitle: "Canter · Masaka", status: "Active", fields: ["location": "Masaka", "latitude": "-0.341111", "longitude": "31.736111", "speedKmh": "62", "driver": "Peter Mukasa"]),
             seedRecord(module: "fleet", entity: "Drivers", title: "Joseph Ssewanyana", subtitle: "DRV-008", status: "Active"),
             seedRecord(module: "fleet", entity: "Fuel Requests", title: "FUEL-2026-044", subtitle: "UAX 221K · Namanve", status: "Pending", amount: 420_000),
         ]),
@@ -59,7 +61,10 @@ public func erpModules() -> [ErpModule] {
             seedRecord(module: "logistics", entity: "Shipments", title: "SHP-2026-077", subtitle: "Namanve → Javas Kololo", status: "In transit"),
         ]),
         ErpModule(id: "distribution", label: "Distribution", group: "Operations", description: "Distribution orders, picking, packing, delivery runs, allocations, and returns.", icon: "arrow.triangle.branch", color: 0xFF0D9488, entities: ["Distribution Orders", "Picking Lists", "Packing Lists", "Delivery Runs", "Stock Allocations", "Distribution Returns"], seed: [
-            seedRecord(module: "distribution", entity: "Delivery Runs", title: "RUN-2026-14", subtitle: "Kampala city loop", status: "Scheduled", date: todayIsoDate()),
+            seedRecord(module: "distribution", entity: "Delivery Runs", title: "RUN-2026-14", subtitle: "Kololo shops", status: "Scheduled", date: todayIsoDate(), fields: ["route": "Kololo", "vehicle": "UBE 104M", "latitude": "0.330600", "longitude": "32.589400"]),
+            seedRecord(module: "distribution", entity: "Delivery Runs", title: "RUN-2026-15", subtitle: "Namanve warehouse", status: "In transit", date: todayIsoDate(), fields: ["route": "Namanve", "vehicle": "UAX 221K", "latitude": "0.385300", "longitude": "32.684700"]),
+            seedRecord(module: "distribution", entity: "Delivery Runs", title: "RUN-2026-16", subtitle: "Masaka depot", status: "Scheduled", date: todayIsoDate(), fields: ["route": "Masaka", "vehicle": "UAV 778C", "latitude": "-0.341111", "longitude": "31.736111"]),
+            seedRecord(module: "distribution", entity: "Distribution Orders", title: "DO-2026-088", subtitle: "Cafe Javas · Kisementi", status: "Open", fields: ["party": "Cafe Javas", "location": "Kisementi"]),
         ]),
         ErpModule(id: "rnd", label: "R&D", group: "Quality", description: "Experiments, formulations, sensory panels, spec sheets, pilots, and cost models.", icon: "flask", color: 0xFF7C3AED, entities: ["Experiments", "Formulations", "Sensory Panels", "Spec Sheets", "Pilot Batches", "Cost Models", "AI Insights"]),
         ErpModule(id: "lab", label: "Lab", group: "Quality", description: "Lab requests, samples, trials, methods, calibrations, results, and stability.", icon: "testtube.2", color: 0xFF6D28D9, entities: ["Product Simulations", "Lab Requests", "Lab Samples", "Lab Trials", "Lab Methods", "Instrument Calibrations", "Lab Results", "Stability Studies"], seed: [

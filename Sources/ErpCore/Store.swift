@@ -49,9 +49,6 @@ public final class ErpStore {
     public var kpis: [Kpi] {
         if let id = activeAppId { return kpisForApp(id, records: records) }
         if isAdmin { return defaultKpis }
-        if let home = defaultSuiteAppForRole(roleName), canOpenSuiteApp(roleName, home, definition: currentRole) {
-            return kpisForApp(home, records: records)
-        }
         let scoped = records.filter { canOpen($0.moduleId) }
         let open = scoped.filter { isOpenStatus($0.status) }.count
         return [
@@ -134,17 +131,30 @@ public final class ErpStore {
             let entities = module.entities.filter { entity in
                 entity != "Clock In" && entity != "My punches" && entity != "Punch Log"
             }
-            let shown = entities.count > 12 ? Array(entities.prefix(8)) : entities
-            for entity in shown {
+            if module.id == "distribution" {
                 out.append(QuickAction(
-                    id: "feat:\(module.id):\(entity)",
-                    label: featureToolLabel(entity),
-                    icon: module.icon,
+                    id: "feat:distribution:map",
+                    label: "Map",
+                    icon: "map.fill",
                     color: module.color,
-                    kind: .list,
+                    kind: .map,
                     appId: app.id,
                     moduleId: module.id,
-                    entity: entity,
+                    section: module.label
+                ))
+            }
+            let shown = entities.count > 12 ? Array(entities.prefix(8)) : entities
+            for entity in shown {
+                let isMap = entity == "Map Analytics"
+                out.append(QuickAction(
+                    id: "feat:\(module.id):\(entity)",
+                    label: isMap ? "Map" : featureToolLabel(entity),
+                    icon: isMap ? "map.fill" : module.icon,
+                    color: module.color,
+                    kind: isMap ? .map : .list,
+                    appId: app.id,
+                    moduleId: module.id,
+                    entity: isMap ? nil : entity,
                     section: module.label
                 ))
             }
@@ -203,6 +213,8 @@ public final class ErpStore {
             return canApprove
         case .access:
             return isAdmin
+        case .map:
+            return canOpen(action.moduleId)
         case .create:
             guard canOpen(action.moduleId) else { return false }
             if let entity = action.entity { return canCreate(action.moduleId, entity) }
@@ -884,15 +896,6 @@ public final class ErpStore {
                 return "Unknown department."
             }
         }
-        if nextApp == nil {
-            let homeApp = defaultSuiteAppForRole(nextUser.role)
-            if let homeApp, canOpenSuiteApp(nextUser.role, homeApp, definition: def) {
-                nextApp = homeApp
-            } else {
-                let visible = suiteApps.filter { canOpenSuiteApp(nextUser.role, $0.id, definition: def) }
-                if visible.count == 1 { nextApp = visible[0].id }
-            }
-        }
         if nextDept == nil, let nextApp, let app = suiteAppById(nextApp) {
             nextDept = app.moduleIds.first { roleCanOpen(nextUser.role, $0) }
         }
@@ -900,7 +903,11 @@ public final class ErpStore {
             let home = defaultDepartmentForRole(nextUser.role)
             if let home, moduleById(home) != nil, roleCanOpen(nextUser.role, home) {
                 nextDept = home
-                if nextApp == nil { nextApp = suiteAppContaining(home)?.id }
+            } else {
+                let visible = suiteApps.filter { canOpenSuiteApp(nextUser.role, $0.id, definition: def) }
+                if visible.count == 1 {
+                    nextDept = visible[0].moduleIds.first { roleCanOpen(nextUser.role, $0) }
+                }
             }
         }
         user = nextUser
@@ -1003,17 +1010,13 @@ public final class ErpStore {
     private func enforceAccess() {
         guard let current = user else { return }
         if let appId = activeAppId, !canOpenSuiteApp(current.role, appId, definition: roleOf(current.role)) {
-            activeAppId = defaultSuiteAppForRole(current.role)
+            activeAppId = nil
         }
         if let dept = activeDepartmentId, moduleById(dept) != nil && roleCanOpen(current.role, dept) {
-            if activeAppId == nil { activeAppId = suiteAppContaining(dept)?.id }
             return
         }
         let home = defaultDepartmentForRole(current.role)
         activeDepartmentId = (home != nil && moduleById(home!) != nil && roleCanOpen(current.role, home!)) ? home : nil
-        if activeAppId == nil, let dept = activeDepartmentId {
-            activeAppId = suiteAppContaining(dept)?.id
-        }
     }
 
     public func logout() {

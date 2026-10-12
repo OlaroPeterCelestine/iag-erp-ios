@@ -87,7 +87,7 @@ final class RbacTests: XCTestCase {
         XCTAssertEqual(s.login("contractor", testPassword, departmentId: "banking"), "Your role cannot open that app.")
         XCTAssertNil(s.login("contractor", testPassword))
         XCTAssertEqual(s.activeDepartmentId, "projects")
-        XCTAssertEqual(s.activeAppId, "projects")
+        XCTAssertNil(s.activeAppId)
         XCTAssertTrue(s.canOpen("contract-manager"))
         XCTAssertFalse(s.canOpen("sales"))
         s.setActiveDepartment("banking")
@@ -171,7 +171,8 @@ final class RbacTests: XCTestCase {
         XCTAssertTrue(s.canCreate("lab"))
         XCTAssertFalse(s.canApprove)
         XCTAssertEqual(s.activeDepartmentId, "lab")
-        XCTAssertEqual(s.activeAppId, "quality")
+        XCTAssertNil(s.activeAppId)
+        XCTAssertEqual(s.visibleSuiteApps.map(\.id), ["lab"])
     }
 
     func testCatalogSeedsEveryWebErpFeature() {
@@ -250,9 +251,20 @@ final class RbacTests: XCTestCase {
 
     func testSuiteAppsAreSeparateFullTools() {
         XCTAssertEqual(suiteApps.map(\.id).sorted(), [
-            "contracts", "crm", "dms", "finance", "fleet", "hr", "logistics", "pos",
+            "contracts", "crm", "dms", "finance", "fleet", "hr", "inventory", "lab", "logistics", "pos",
             "procurement", "production", "projects", "quality", "requests", "sales", "security",
         ].sorted())
+        XCTAssertEqual(suiteAppById("dms")?.label, "Distribution")
+        XCTAssertEqual(suiteAppById("sales")?.label, "ERP")
+        XCTAssertEqual(suiteAppById("pos")?.label, "BurrP!")
+        XCTAssertEqual(suiteAppById("projects")?.label, "Project Manager")
+        XCTAssertEqual(suiteAppById("contracts")?.label, "Contract Manager")
+        XCTAssertEqual(suiteAppById("fleet")?.label, "Fleet")
+        XCTAssertEqual(suiteAppById("inventory")?.moduleIds, ["inventory"])
+        XCTAssertEqual(suiteAppById("lab")?.moduleIds, ["lab"])
+        XCTAssertEqual(suiteAppById("procurement")?.moduleIds, ["purchases"])
+        XCTAssertEqual(suiteAppById("logistics")?.moduleIds, ["logistics", "distribution"])
+        XCTAssertFalse(suiteAppById("quality")?.moduleIds.contains("lab") == true)
         XCTAssertTrue(canOpenSuiteApp("Administrator", "crm"))
         XCTAssertTrue(canOpenSuiteApp("Administrator", "pos"))
         XCTAssertTrue(canOpenSuiteApp("Administrator", "contracts"))
@@ -281,18 +293,24 @@ final class RbacTests: XCTestCase {
         s.logout()
 
         XCTAssertNil(s.login("procurement", testPassword))
-        XCTAssertEqual(s.activeAppId, "procurement")
+        XCTAssertNil(s.activeAppId)
+        XCTAssertTrue(s.visibleSuiteApps.contains { $0.id == "procurement" })
+        XCTAssertTrue(s.visibleSuiteApps.contains { $0.id == "finance" })
+        XCTAssertFalse(s.visibleSuiteApps.contains { $0.id == "security" })
+        s.openApp("procurement")
         XCTAssertTrue(s.appModules.contains { $0.id == "purchases" })
         XCTAssertFalse(s.appModules.contains { $0.id == "banking" })
         s.logout()
 
         XCTAssertNil(s.login("hr", testPassword))
-        XCTAssertEqual(s.activeAppId, "hr")
+        XCTAssertNil(s.activeAppId)
+        XCTAssertTrue(s.visibleSuiteApps.contains { $0.id == "hr" })
         s.logout()
 
         XCTAssertEqual(s.login("clerk", testPassword, departmentId: "security"), "Your role cannot open that app.")
         XCTAssertNil(s.login("clerk", testPassword))
-        XCTAssertEqual(s.activeAppId, "finance")
+        XCTAssertNil(s.activeAppId)
+        XCTAssertTrue(s.visibleSuiteApps.contains { $0.id == "finance" })
     }
 
     func testQuickActionsFollowAppAndRbac() {
@@ -333,7 +351,8 @@ final class RbacTests: XCTestCase {
         s.logout()
 
         XCTAssertNil(s.login("viewer", testPassword))
-        XCTAssertEqual(s.activeAppId, "finance")
+        XCTAssertNil(s.activeAppId)
+        s.openApp("finance")
         XCTAssertTrue(s.homeQuickActions.contains { $0.id == "clock" })
         XCTAssertTrue(s.homeQuickActions.contains { $0.id == "reports" })
         XCTAssertFalse(s.homeQuickActions.contains { $0.id == "receipt" })
@@ -341,6 +360,8 @@ final class RbacTests: XCTestCase {
         s.logout()
 
         XCTAssertNil(s.login("procurement", testPassword))
+        XCTAssertNil(s.activeAppId)
+        s.openApp("procurement")
         XCTAssertTrue(s.homeQuickActions.contains { $0.id == "po" })
         XCTAssertFalse(s.homeQuickActions.contains { $0.id == "invoice" })
     }
@@ -358,9 +379,35 @@ final class RbacTests: XCTestCase {
         s.logout()
 
         XCTAssertNil(s.login("viewer", testPassword))
+        XCTAssertNil(s.activeAppId)
         XCTAssertFalse(s.welcomeStats.contains { $0.id == "todo" })
-        XCTAssertTrue(s.welcomeStats.contains { $0.id == "desks" })
+        XCTAssertTrue(s.welcomeStats.contains { $0.id == "apps" })
         XCTAssertTrue(s.welcomeStats.contains { $0.id == "clock" })
+    }
+
+    func testFleetAndDistributionMapsPlotKnownPlaces() {
+        let modules = erpModules()
+        let vehicles = modules.first { $0.id == "fleet" }?.seed ?? []
+        let fleet = fleetMapPins(vehicles)
+        XCTAssertEqual(fleet.map(\.title).sorted(), ["UAV 778C", "UAX 221K", "UBE 104M"])
+        XCTAssertEqual(fleet.first { $0.title == "UAX 221K" }?.latitude ?? 0, 0.3853, accuracy: 0.0001)
+        XCTAssertEqual(fleet.first { $0.title == "UAV 778C" }?.longitude ?? 0, 31.736111, accuracy: 0.0001)
+
+        let stops = distributionMapPins(modules.first { $0.id == "distribution" }?.seed ?? [])
+        XCTAssertEqual(stops.count, 4)
+        XCTAssertTrue(stops.contains { $0.title == "DO-2026-088" })
+        XCTAssertEqual(stops.first { $0.title == "DO-2026-088" }?.latitude ?? 0, 0.3372, accuracy: 0.0001)
+
+        let named = seedRecord(module: "fleet", entity: "Vehicles", title: "Van", subtitle: "Kololo shop", status: "Active")
+        XCTAssertEqual(fleetMapPins([named]).count, 1)
+        let fuel = seedRecord(module: "fleet", entity: "Fuel Requests", title: "FUEL", subtitle: "Namanve", status: "Pending")
+        XCTAssertTrue(fleetMapPins([fuel]).isEmpty)
+
+        let fleetTabs = shellTabs(appId: "fleet", role: "Administrator", canApprove: true, canClockIn: true)
+        XCTAssertEqual(Array(fleetTabs.map(\.id).prefix(3)), ["home", "map", "vehicles"])
+        XCTAssertEqual(fleetTabs.first { $0.id == "map" }?.moduleId, "fleet")
+        let deliveryTabs = shellTabs(appId: "logistics", role: "Administrator", canApprove: true, canClockIn: true)
+        XCTAssertEqual(deliveryTabs.first { $0.id == "map" }?.moduleId, "distribution")
     }
 
     func testNoticesStayOutOfTheApprovalQueue() {

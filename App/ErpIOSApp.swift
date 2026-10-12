@@ -167,6 +167,7 @@ func entityIcon(_ name: String) -> String {
     if s.contains("warehouse") || s.contains("stock") || s.contains("inventory") || s.contains("item") || s.contains("kit") { return "cube.box" }
     if s.contains("roast") { return "flame" }
     if s.contains("machine") || s.contains("batch") || s.contains("bill of material") || s.contains("production") || s.contains("yield") || s.contains("downtime") { return "gearshape.2" }
+    if s.contains("map") { return "map" }
     if s.contains("vehicle") || s.contains("driver") || s.contains("trip") || s.contains("fleet") { return "car" }
     if s.contains("fuel") { return "fuelpump" }
     if s.contains("maintenance") || s.contains("service reminder") { return "wrench.and.screwdriver" }
