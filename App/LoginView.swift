@@ -55,7 +55,7 @@ struct LoginView: View {
             }
             .background(LoginPalette.canvas.ignoresSafeArea())
             .scrollDismissesKeyboard(.interactively)
-            .toolbar(.hidden, for: .navigationBar)
+            .iagHideNavigationBar()
             .sheet(isPresented: $showReset) {
                 ResetPasswordView(username: username)
             }
@@ -160,7 +160,7 @@ struct LoginView: View {
         VStack(alignment: .leading, spacing: 6) {
             fieldLabel(title)
             TextField("Enter \(title.lowercased())", text: text)
-                .textInputAutocapitalization(.never)
+                .iagTextCase(.never)
                 .autocorrectionDisabled()
                 .textContentType(.username)
                 .submitLabel(.next)
@@ -187,7 +187,7 @@ struct LoginView: View {
                     SecureField("Enter password", text: $password)
                 }
             }
-            .textInputAutocapitalization(.never)
+            .iagTextCase(.never)
             .autocorrectionDisabled()
             .textContentType(.password)
             .submitLabel(.go)
@@ -270,7 +270,7 @@ struct ResetPasswordView: View {
         NavigationStack {
             Form {
                 TextField("Username", text: $username)
-                    .textInputAutocapitalization(.never)
+                    .iagTextCase(.never)
                     .textContentType(.username)
                 SecureField("New password on this device", text: $password)
                     .textContentType(.newPassword)

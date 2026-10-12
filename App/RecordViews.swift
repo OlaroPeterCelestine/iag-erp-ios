@@ -223,8 +223,20 @@ struct RecordDetailView: View {
         let canDecide = store.canApproveModule(record.moduleId) && store.isOpenStatus(record.status)
         let canVoid = store.canVoid(record.moduleId)
         let canDelete = store.canDelete(record.moduleId, record.entity)
-        if draft || canDecide || canVoid || canDelete {
+        if draft || canDecide || canVoid || canDelete || store.canEdit(record.moduleId, record.entity) {
             VStack(spacing: 8) {
+                if store.canEdit(record.moduleId, record.entity) && !isVoidedStatus(record.status) {
+                    NavigationLink {
+                        RecordFormView(moduleId: record.moduleId, entity: record.entity, recordId: record.id)
+                    } label: {
+                        Text("Edit")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 40)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(IagTheme.leaf)
+                }
                 if draft {
                     recordButton("Submit", prominent: true) {
                         let result = store.remoteSession ? await store.submitRecordAsync(record) : store.submitRecord(record)
@@ -280,22 +292,46 @@ struct RecordFormView: View {
     @Environment(\.dismiss) private var dismiss
     let moduleId: String
     let entity: String
+    var recordId: String? = nil
     @State private var title = ""
     @State private var subtitle = ""
     @State private var amount = ""
+    @State private var extras: [String: String] = [:]
     @State private var error: String?
+    @State private var primed = false
+
+    private var existing: ErpRecord? {
+        guard let recordId else { return nil }
+        return box.store.records.first { $0.id == recordId }
+    }
+
+    private var fieldKeys: [String] {
+        box.store.formFieldKeys(moduleId, entity)
+    }
+
+    private var status: String {
+        existing?.status ?? newRecordStatus(module: box.store.moduleById(moduleId), entity: entity)
+    }
 
     var body: some View {
+        let editing = existing != nil
+        let allowed = editing ? box.store.canEdit(moduleId, entity) : box.store.canCreate(moduleId, entity)
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if !box.store.canCreate(moduleId, entity) {
-                    IagEmptyHint(text: "Your role cannot create this record.", systemName: "lock")
+                if recordId != nil && existing == nil {
+                    IagEmptyHint(text: "Record not found.", systemName: "doc")
                         .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                } else if !allowed {
+                    IagEmptyHint(
+                        text: editing ? "Your role cannot edit this record." : "Your role cannot create this record.",
+                        systemName: "lock"
+                    )
+                    .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 } else {
                     PageStats(stats: [
                         ("Desk", box.store.moduleById(moduleId)?.label ?? "Record"),
                         ("Type", entity),
-                        ("Status", "Draft"),
+                        ("Status", status),
                         ("Amount", amount.isEmpty ? "—" : (Double(amount).map(compactMoney) ?? amount)),
                     ])
                     IagGrouped {
@@ -304,12 +340,16 @@ struct RecordFormView: View {
                         formField("Note", text: $subtitle, prompt: "Who, where, or why")
                         IagRowDivider(inset: 14)
                         formField("Amount", text: $amount, prompt: "UGX", numeric: true)
+                        ForEach(fieldKeys, id: \.self) { key in
+                            IagRowDivider(inset: 14)
+                            formField(prettyLabel(key), text: extraBinding(key), prompt: "")
+                        }
                     }
                     if let error {
                         Text(error).font(.caption).foregroundStyle(.red)
                     }
                     Button(action: save) {
-                        Text("Save draft")
+                        Text(isDraftStatus(status) ? "Save draft" : "Save")
                             .font(.subheadline.weight(.semibold))
                             .frame(maxWidth: .infinity)
                             .frame(minHeight: 40)
@@ -322,7 +362,31 @@ struct RecordFormView: View {
         }
         .scrollIndicators(.hidden)
         .background(IagTheme.canvas.ignoresSafeArea())
-        .iagBar("New \(entity)", subtitle: box.store.moduleById(moduleId)?.label)
+        .iagBar(editing ? "Edit \(entity)" : "New \(entity)", subtitle: box.store.moduleById(moduleId)?.label)
+        .onAppear(perform: prime)
+    }
+
+    private func prime() {
+        guard !primed else { return }
+        primed = true
+        guard let existing else { return }
+        title = existing.title
+        subtitle = existing.subtitle
+        if let value = existing.amount {
+            amount = value.rounded() == value ? String(Int(value)) : String(value)
+        }
+        var next = extras
+        for key in fieldKeys {
+            next[key] = existing.fields[key] ?? ""
+        }
+        extras = next
+    }
+
+    private func extraBinding(_ key: String) -> Binding<String> {
+        Binding(
+            get: { extras[key] ?? "" },
+            set: { extras[key] = $0 }
+        )
     }
 
     private func formField(_ label: String, text: Binding<String>, prompt: String, numeric: Bool = false) -> some View {
@@ -332,27 +396,42 @@ struct RecordFormView: View {
                 .foregroundStyle(.secondary)
             TextField(prompt, text: text)
                 .font(.subheadline)
-                .keyboardType(numeric ? .decimalPad : .default)
+                .iagNumericKeyboard(numeric)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
     }
 
     private func save() {
-        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        let reference = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if reference.isEmpty {
             error = "Add a reference."
             return
         }
-        box.store.addRecord(ErpRecord(
-            id: newId(),
+        var fields: [String: String] = [:]
+        for (key, value) in extras {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { fields[key] = trimmed }
+        }
+        let saved = ErpRecord(
+            id: existing?.id ?? newId(),
             moduleId: moduleId,
             entity: entity,
-            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+            title: reference,
             subtitle: subtitle.trimmingCharacters(in: .whitespacesAndNewlines),
-            status: "Draft",
-            date: todayIsoDate(),
-            amount: Double(amount.trimmingCharacters(in: .whitespacesAndNewlines))
-        ))
+            status: status,
+            date: {
+                let current = existing?.date.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                return current.isEmpty ? todayIsoDate() : current
+            }(),
+            amount: Double(amount.trimmingCharacters(in: .whitespacesAndNewlines)),
+            fields: fields
+        )
+        if existing != nil {
+            box.store.updateRecord(saved)
+        } else {
+            box.store.addRecord(saved)
+        }
         dismiss()
     }
 }

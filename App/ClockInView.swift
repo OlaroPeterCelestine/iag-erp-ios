@@ -39,7 +39,12 @@ final class LocationFix: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways {
+        #if os(iOS)
+        let allowed = manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways
+        #else
+        let allowed = manager.authorizationStatus == .authorizedAlways
+        #endif
+        if allowed {
             manager.requestLocation()
         } else if manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted {
             busy = false

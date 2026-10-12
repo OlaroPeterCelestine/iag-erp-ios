@@ -10,10 +10,10 @@
 		1CB61EFA8150446E28595406 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF5858A0E0E2201B92DA6CCC /* LoginView.swift */; };
 		2613A130BA2E4F11EDA8854F /* ClockInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58956FD1C4B58BA408AE14E8 /* ClockInView.swift */; };
 		2A8EB5D3376C791DADAC7B16 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9C0AAAAA1245D07FC1AF5570 /* Assets.xcassets */; };
-		9B7E2D14A6C83F05E1B9A2D8 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F3C8A91E6B4D2A7058E1C4D7 /* LaunchScreen.storyboard */; };
 		5C621F36A0216493F8BF9CD7 /* RecordViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80D09DE96D5972A468BA6F9D /* RecordViews.swift */; };
 		8B4334446378D9AC4B14D5E4 /* ShellViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21E2ADCDC13D7DD79363738B /* ShellViews.swift */; };
 		9529B5B37184624524358A00 /* AccessViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBA6FA9546C6E82C9C58545 /* AccessViews.swift */; };
+		9B7E2D14A6C83F05E1B9A2D8 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F3C8A91E6B4D2A7058E1C4D7 /* LaunchScreen.storyboard */; };
 		A594D57D3AB4EE865BA4177C /* ErpCore in Frameworks */ = {isa = PBXBuildFile; productRef = A31D122B87DD29E797CB4427 /* ErpCore */; };
 		A73A493417A26149E2E116AE /* ErpIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC256553FCCF48F353EE1F8 /* ErpIOSApp.swift */; };
 /* End PBXBuildFile section */
@@ -27,8 +27,8 @@
 		9C0AAAAA1245D07FC1AF5570 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AF5858A0E0E2201B92DA6CCC /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		B7E2F1A09C4D81E6A2B05C31 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		F3C8A91E6B4D2A7058E1C4D7 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		D957E19B16B69713B7749A90 /* ERP iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ERP iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3C8A91E6B4D2A7058E1C4D7 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -170,7 +170,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 202609151430;
-				DEVELOPMENT_TEAM = 8JV2TLMJT4;
+				DEVELOPMENT_TEAM = FV7CARWTSK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
@@ -178,6 +178,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ACP Central uses your location to verify you are on an IAG site or block when you clock in.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -235,7 +236,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 202609151430;
-				DEVELOPMENT_TEAM = 8JV2TLMJT4;
+				DEVELOPMENT_TEAM = FV7CARWTSK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = App/Info.plist;
@@ -243,6 +244,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ACP Central uses your location to verify you are on an IAG site or block when you clock in.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (

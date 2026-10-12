@@ -73,7 +73,7 @@ struct RolesPanel: View {
                     let crud = Crud(view: view, create: create, edit: edit, delete: delete)
                     var pages: [String: Crud] = [:]
                     if restrict {
-                        pages[pageWildcardKey] = .none
+                        pages[pageWildcardKey] = Crud.none
                         for id in grants { pages[id] = crud }
                     }
                     error = box.store.saveRole(RoleDefinition(id: newRoleId(), name: name, description: description, crud: crud, pagePermissions: pages))
@@ -117,7 +117,7 @@ struct UsersPanel: View {
             }
             Section("Add user") {
                 TextField("Username", text: $username)
-                    .textInputAutocapitalization(.never)
+                    .iagTextCase(.never)
                 TextField("Name", text: $name)
                 TextField("Role", text: $role)
                 SecureField("Password", text: $password)
@@ -265,7 +265,7 @@ struct ProfileView: View {
                 .foregroundStyle(.secondary)
             TextField(label, text: text)
                 .font(.subheadline)
-                .textInputAutocapitalization(label == "Email" ? .never : .words)
+                .iagTextCase(label == "Email" ? .never : .words)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

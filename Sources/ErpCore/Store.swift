@@ -717,7 +717,7 @@ public final class ErpStore {
                 switch await api.deleteRecord(module: target.module, entity: target.entity, id: record.id) {
                 case .success:
                     await MainActor.run { [weak self] in
-                        self?.knownRemoteIds.remove(record.id)
+                        _ = self?.knownRemoteIds.remove(record.id)
                     }
                 case .failure(let error):
                     let message = error.message
@@ -1021,6 +1021,19 @@ public final class ErpStore {
         notify()
         let chainAdvance = ErpAPI.isChainEntity(record.entity) && !isDraftStatus(status) && status.lowercased() != "submitted" && status.lowercased() != "posted"
         if !chainAdvance { pushRemote(record) }
+    }
+
+    public func formFieldKeys(_ moduleId: String, _ entity: String) -> [String] {
+        entityFormFieldKeys(module: moduleById(moduleId), entity: entity, records: records)
+    }
+
+    public func updateRecord(_ record: ErpRecord) {
+        if let user, !canEditEntity(user.role, record.moduleId, record.entity, definition: currentRole) { return }
+        guard let index = records.firstIndex(where: { $0.id == record.id }) else { return }
+        records[index] = record
+        persist()
+        notify()
+        pushRemote(record)
     }
 
     public func addRecord(_ record: ErpRecord) {

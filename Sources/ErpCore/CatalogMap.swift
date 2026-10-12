@@ -62,6 +62,62 @@ public func recordFromApi(_ row: [String: Any], moduleId: String, entity: String
     )
 }
 
+private let formSkip: Set<String> = [
+    "id", "status", "date", "createdat", "updatedat", "name", "title", "reference", "description", "amount", "subtitle", "balance", "snapshot", "initials",
+]
+
+private func formPrettyLabel(_ raw: String) -> String {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.contains(" ") || trimmed.contains("&") || trimmed.contains("(") { return trimmed }
+    var words: [String] = []
+    var current = ""
+    for character in trimmed {
+        if character == "_" || character == "-" {
+            if !current.isEmpty { words.append(current); current = "" }
+            continue
+        }
+        if character.isUppercase, !current.isEmpty, let last = current.last, last.isLowercase {
+            words.append(current)
+            current = String(character)
+        } else {
+            current.append(character)
+        }
+    }
+    if !current.isEmpty { words.append(current) }
+    return words.map { word in
+        guard let first = word.first else { return word }
+        return String(first).uppercased() + word.dropFirst()
+    }.joined(separator: " ")
+}
+
+/// Extra inputs a create/edit form should show for this desk, beyond reference, note, and amount.
+public func entityFormFieldKeys(module: ErpModule?, entity: String, records: [ErpRecord]) -> [String] {
+    var keys: [String] = []
+    var labels = Set<String>()
+    func add(_ raw: String) {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let token = trimmed.lowercased()
+        if trimmed.isEmpty || formSkip.contains(token) { return }
+        let label = formPrettyLabel(trimmed).lowercased()
+        if labels.contains(label) { return }
+        labels.insert(label)
+        keys.append(trimmed)
+    }
+    module?.seed.filter { $0.entity == entity }.forEach { $0.fields.keys.forEach(add) }
+    let moduleId = module?.id
+    records.filter { $0.moduleId == moduleId && $0.entity == entity }.forEach { $0.fields.keys.forEach(add) }
+    if let moduleId, !moduleId.isEmpty {
+        let target = apiStorageTarget(moduleId: moduleId, entity: entity)
+        entityCatalogFields["\(target.module)/\(target.entity)"]?.forEach(add)
+    }
+    return keys.sorted { formPrettyLabel($0).localizedCaseInsensitiveCompare(formPrettyLabel($1)) == .orderedAscending }
+}
+
+/// Approval desks start as drafts. Master lists (customers, items, accounts) start active.
+public func newRecordStatus(module: ErpModule?, entity: String) -> String {
+    module?.approvalEntities.contains(entity) == true ? "Draft" : "Active"
+}
+
 public func apiPayload(from record: ErpRecord) -> [String: String] {
     var row = record.fields
     row["id"] = record.id

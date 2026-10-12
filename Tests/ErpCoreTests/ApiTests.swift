@@ -296,6 +296,40 @@ final class ApiTests: XCTestCase {
         XCTAssertTrue(s.recordsFor("projects", "Payment Requests (IPC)").isEmpty)
     }
 
+    func testFormFieldsFollowTheDeskAndEditsReplaceTheRow() {
+        let s = ErpStore(persistence: MemoryKeyValueStore())
+        s.load()
+        let keys = s.formFieldKeys("sales", "Customers")
+        XCTAssertTrue(keys.contains { $0.caseInsensitiveCompare("email") == .orderedSame })
+        XCTAssertTrue(keys.contains { $0.caseInsensitiveCompare("currency") == .orderedSame })
+        XCTAssertTrue(keys.contains { $0.caseInsensitiveCompare("address") == .orderedSame })
+        XCTAssertFalse(keys.contains { $0.caseInsensitiveCompare("amount") == .orderedSame })
+        let created = ErpRecord(
+            id: "cust-1",
+            moduleId: "sales",
+            entity: "Customers",
+            title: "Test Cafe",
+            subtitle: "CUST-9",
+            status: "Active",
+            date: "2026-10-12",
+            fields: ["Email": "a@cafe.ug"]
+        )
+        s.addRecord(created)
+        s.updateRecord(ErpRecord(
+            id: "cust-1",
+            moduleId: "sales",
+            entity: "Customers",
+            title: "Test Cafe Updated",
+            subtitle: "CUST-9",
+            status: "Active",
+            date: "2026-10-12",
+            fields: ["Email": "b@cafe.ug"]
+        ))
+        let stored = s.recordsFor("sales", "Customers").first { $0.id == "cust-1" }
+        XCTAssertEqual(stored?.title, "Test Cafe Updated")
+        XCTAssertEqual(stored?.fields["Email"], "b@cafe.ug")
+    }
+
     func testChainEntityKeys() {
         XCTAssertTrue(ErpAPI.isChainEntity("Payment Requests (IPC)"))
         XCTAssertTrue(ErpAPI.isChainEntity("Material Requests"))

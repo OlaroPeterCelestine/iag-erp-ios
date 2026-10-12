@@ -32,9 +32,11 @@ struct ShellView: View {
             tab = "home"
         }
         .tint(IagTheme.leaf)
+        #if os(iOS)
         .toolbarColorScheme(box.store.themeMode == "dark" ? .dark : box.store.themeMode == "light" ? .light : nil, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarBackground(IagTheme.card, for: .tabBar)
+        #endif
         .environment(\.shellTab, $tab)
     }
 
@@ -103,7 +105,7 @@ struct FinHome: View {
         }
         .scrollIndicators(.hidden)
         .background(IagTheme.canvas.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .iagHideNavigationBar()
     }
 
     private var header: some View {
