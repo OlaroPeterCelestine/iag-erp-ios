@@ -5,12 +5,15 @@ All notable changes to **IAG Central iOS** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-The marketing version in the Xcode target (`1.0.0`) is the source of truth.
+The marketing version in the Xcode target (`1.1.0`) is the source of truth.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-12
+
 ### Added
 
+- Every web desk opens with that desk's form: labels, required fields, choices, dates, and amounts
 - Every web ERP desk and feature on the phone: Home lists all departments, each desk opens a feature list, plus Trace and the other workspace tools
 - Clock In tab for every signed-in login: GPS punch against HR Sites and Blocks, with a Head Office demo pin for the simulator
 - Separate full apps after sign-in: Finance, Sales, CRM, POS, Procurement, Production, Fleet, Logistics, Projects, Contract Management, HR, Security, Quality, Requests, and DMS
@@ -37,4 +40,5 @@ The marketing version in the Xcode target (`1.0.0`) is the source of truth.
 
 - First native SwiftUI ERP: department desks, records, approvals, and custom roles with the same RBAC as web IAG ERP
 
+[1.1.0]: https://github.com/OlaroPeterCelestine/iag-erp-ios/releases/tag/v1.1.0
 [1.0.0]: https://github.com/OlaroPeterCelestine/iag-erp-ios/releases/tag/v1.0.0

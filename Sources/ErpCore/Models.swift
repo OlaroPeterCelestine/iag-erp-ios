@@ -1,7 +1,7 @@
 import Foundation
 
 public let appName = "ACP Central"
-public let appVersion = "1.0.0"
+public let appVersion = "1.1.0"
 
 func erpJsonText(_ j: [String: Any], _ key: String, fallback: String = "") -> String {
     guard let value = j[key], !(value is NSNull) else { return fallback }

@@ -2,7 +2,7 @@
 
 Native SwiftUI Finance ERP for iPhone and iPad: every department desk, records, approvals, and custom roles — same SoD / RBAC as web **IAG ERP**.
 
-**Version:** `1.0.0` — [changelog](./CHANGELOG.md)
+**Version:** `1.1.0` — [changelog](./CHANGELOG.md)
 
 **Bundle ID:** `africa.iag.central.ios`
 
