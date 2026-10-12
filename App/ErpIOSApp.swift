@@ -186,8 +186,34 @@ func entityIcon(_ name: String) -> String {
     if s.contains("asset") || s.contains("depreciation") || s.contains("lease") || s.contains("amortization") { return "building.2" }
     if s.contains("capital") || s.contains("share") || s.contains("investment") { return "chart.pie" }
     if s.contains("request") { return "list.clipboard" }
-    if s.contains("site") || s.contains("block") || s.contains("department") { return "mappin.and.ellipse" }
+    if s.contains("site") || s.contains("block") { return "mappin.and.ellipse" }
+    if s.contains("department") { return "building.2" }
+    if s.contains("time") || s.contains("session") || s.contains("cycle") { return "clock" }
+    if s.contains("expense") || s.contains("cost") || s.contains("tax") || s.contains("fee") { return "dollarsign.circle" }
+    if s.contains("bean") || s.contains("intake") { return "leaf" }
+    if s.contains("packag") { return "shippingbox" }
+    if s.contains("program") || s.contains("calendar") { return "calendar" }
+    if s.contains("certificate") || s.contains("completion") { return "rosette" }
+    if s.contains("follow") || s.contains("activit") { return "bell" }
+    if s.contains("return") { return "arrow.uturn.backward" }
+    if s.contains("spec") || s.contains("note") || s.contains("statement") { return "doc.text" }
+    if s.contains("insight") || s.contains("simulation") || s.contains("model") { return "sparkles" }
+    if s.contains("calibrat") || s.contains("instrument") { return "wrench.and.screwdriver" }
+    if s.contains("stabilit") || s.contains("kpi") || s.contains("benchmark") || s.contains("productivity") || s.contains("analysis") || s.contains("equity") || s.contains("income") { return "chart.line.uptrend.xyaxis" }
+    if s.contains("check") || s.contains("integrity") || s.contains("matching") { return "checkmark.circle" }
+    if s.contains("provision") || s.contains("hold") { return "tray.full" }
+    if s.contains("share") { return "square.and.arrow.up" }
+    if s.contains("history") { return "clock.arrow.circlepath" }
+    if s.contains("deleted") { return "trash" }
+    if s.contains("gap") || s.contains("improvement") { return "arrow.up.forward" }
+    if s.contains("work system") { return "chart.bar" }
+    if s.contains("account") || s.contains("operation") { return "book.closed" }
     return "square.grid.2x2"
+}
+
+func featureIcon(_ name: String, fallback: String) -> String {
+    let icon = entityIcon(name)
+    return icon == "square.grid.2x2" ? fallback : icon
 }
 
 func statusColor(_ status: String) -> Color {

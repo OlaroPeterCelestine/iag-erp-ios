@@ -296,7 +296,7 @@ public func seedRecord(
 
 public let departmentGroups = [
     "Treasury", "Requests", "Commercial", "Inventory & production", "Projects",
-    "Operations", "Quality", "People", "Accounting", "Records",
+    "Operations", "Quality", "People", "Accounting", "Records", "Trace",
 ]
 
 public struct SuiteApp: Equatable, Identifiable, Sendable {
@@ -315,6 +315,7 @@ public let suiteApps: [SuiteApp] = [
     SuiteApp(id: "sales", label: "ERP", description: "Customers, quotes, orders, invoices, and credit notes.", moduleIds: ["sales"], icon: "storefront", color: 0xFF059669),
     SuiteApp(id: "finance", label: "Finance", description: "Banking, receipts, claims, accounts, reports, assets, capital, and investments.", moduleIds: ["banking", "receipts-payments", "expense-claims", "accounts", "reports", "investments", "assets", "capital"], icon: "banknote", color: 0xFF0369A1),
     SuiteApp(id: "fleet", label: "Fleet", description: "HAULA. Vehicles, drivers, fuel, trips, maintenance, and the fleet map.", moduleIds: ["fleet"], icon: "car.fill", color: 0xFFD97706),
+    SuiteApp(id: "maintenance", label: "Maintenance", description: "Work orders, preventive schedules, spare parts, and reliability.", moduleIds: ["maintenance"], icon: "wrench.and.screwdriver", color: 0xFFB45309),
     SuiteApp(id: "hr", label: "HR", description: "Employees, attendance, leave, payroll runs, and payslips.", moduleIds: ["payroll"], icon: "person.2", color: 0xFF7C3AED),
     SuiteApp(id: "inventory", label: "Inventory", description: "Items, warehouses, stock movements, and stocktakes.", moduleIds: ["inventory"], icon: "cube.box", color: 0xFF0E7490),
     SuiteApp(id: "lab", label: "Lab", description: "Lab requests, samples, trials, results, and stability.", moduleIds: ["lab"], icon: "testtube.2", color: 0xFF6D28D9),
@@ -324,6 +325,7 @@ public let suiteApps: [SuiteApp] = [
     SuiteApp(id: "production", label: "Production", description: "Plans, machines, batches, roast, packaging, downtime, and yield.", moduleIds: ["production"], icon: "gearshape.2", color: 0xFFB45309),
     SuiteApp(id: "projects", label: "Project Manager", description: "Projects, Gantt, IPC, materials, and work programs.", moduleIds: ["projects"], icon: "briefcase", color: 0xFF4F46E5),
     SuiteApp(id: "security", label: "Security", description: "Gate passes, visitor passes, and security incidents.", moduleIds: ["security"], icon: "shield.checkered", color: 0xFF334155),
+    SuiteApp(id: "trace", label: "Trace", description: "Farmers, farms, harvest lots, custody, and farmgate.", moduleIds: ["farmer-traceability"], icon: "leaf", color: 0xFF047857),
     SuiteApp(id: "quality", label: "Quality", description: "QA, R&D, and work-system benchmarks.", moduleIds: ["qa", "rnd", "benchmark"], icon: "checkmark.seal", color: 0xFF0369A1),
     SuiteApp(id: "requests", label: "Requests", description: "General and oral payment requests through the approval desks.", moduleIds: ["general-requests", "oral-payment-requests"], icon: "list.clipboard", color: 0xFF7C3AED),
 ]
@@ -334,6 +336,7 @@ public func suiteAppById(_ id: String?) -> SuiteApp? {
     switch id {
     case "records": key = "dms"
     case "contract-manager", "contract-management": key = "contracts"
+    case "farmer-traceability": key = "trace"
     default: key = id
     }
     return suiteApps.first { $0.id == key }
@@ -829,6 +832,8 @@ public let quickActionCatalog: [QuickAction] = [
     QuickAction(id: "trip", label: "Trip", icon: "map", color: 0xFFD97706, kind: .create, appId: "fleet", moduleId: "fleet", entity: "Trip Requests"),
     QuickAction(id: "maintenance", label: "Service", icon: "wrench.and.screwdriver", color: 0xFFD97706, kind: .create, appId: "fleet", moduleId: "fleet", entity: "Maintenance Requests"),
     QuickAction(id: "vehicle", label: "Vehicle", icon: "car.fill", color: 0xFFD97706, kind: .create, appId: "fleet", moduleId: "fleet", entity: "Vehicles"),
+    QuickAction(id: "work-order", label: "Work order", icon: "wrench.and.screwdriver", color: 0xFFB45309, kind: .list, appId: "maintenance", moduleId: "maintenance", entity: "Work Orders"),
+    QuickAction(id: "farmers", label: "Farmers", icon: "leaf", color: 0xFF047857, kind: .list, appId: "trace", moduleId: "farmer-traceability", entity: "Farmers"),
     QuickAction(id: "invoice", label: "Invoice", icon: "doc.text.fill", color: 0xFF059669, kind: .create, appId: "sales", moduleId: "sales", entity: "Sales Invoices"),
     QuickAction(id: "customer", label: "Customer", icon: "person.crop.circle.badge.plus", color: 0xFF059669, kind: .create, appId: "sales", moduleId: "sales", entity: "Customers"),
     QuickAction(id: "quote", label: "Quote", icon: "doc.plaintext", color: 0xFF059669, kind: .create, appId: "sales", moduleId: "sales", entity: "Sales Quotes"),

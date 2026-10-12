@@ -143,7 +143,7 @@ public final class ErpStore {
                     section: module.label
                 ))
             }
-            let shown = entities.count > 12 ? Array(entities.prefix(8)) : entities
+            let shown = entities
             for entity in shown {
                 let isMap = entity == "Map Analytics"
                 out.append(QuickAction(

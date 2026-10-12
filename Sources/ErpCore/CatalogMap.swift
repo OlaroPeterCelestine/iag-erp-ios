@@ -17,22 +17,70 @@ public func apiEntityKey(_ label: String) -> String {
         .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
 }
 
+/// Phone labels whose web record key is not the slug of the label.
+private let webEntityAliases: [String: [String: String]] = [
+    "production": [
+        "factories": "plants",
+        "shop-floors": "sections",
+        "tracked-kpis": "kpi-codes",
+    ],
+    "maintenance": [
+        "job-cards": "batch-records",
+        "preventive-schedules": "pm-schedules",
+        "downtime": "downtime-logs",
+    ],
+    "security": [
+        "gate-check-in-out": "gate-passes",
+        "visitor-pre-registrations": "visitor-passes",
+    ],
+]
+
 public func apiStorageTarget(moduleId: String, entity: String) -> (module: String, entity: String) {
-    let key = apiEntityKey(entity)
+    var module = moduleId
+    var key = apiEntityKey(entity)
     switch moduleId {
     case "receipts-payments":
-        return ("banking", key)
+        module = "banking"
     case "clock-in":
-        return ("payroll", key)
+        module = "payroll"
     case "folders":
-        return ("documents", key)
+        module = "documents"
     case "general-requests", "oral-payment-requests":
-        return ("requests", key)
+        module = "requests"
     case "contract-manager":
-        return ("projects", key)
+        module = "projects"
+    case "maintenance":
+        module = "production"
     default:
-        return (moduleId, key)
+        break
     }
+    if let aliased = webEntityAliases[moduleId]?[key] {
+        key = aliased
+    }
+    return (module, key)
+}
+
+public struct FormFieldSpec: Equatable, Identifiable {
+    public var key: String
+    public var label: String
+    public var type: String
+    public var required: Bool
+    public var options: [String]
+    public var id: String { key }
+
+    public init(key: String, label: String, type: String, required: Bool, options: [String] = []) {
+        self.key = key
+        self.label = label
+        self.type = type
+        self.required = required
+        self.options = options
+    }
+}
+
+/// The web form for this desk: labels, field types, required flags, and choices.
+public func formSpecs(moduleId: String, entity: String) -> [FormFieldSpec] {
+    let target = apiStorageTarget(moduleId: moduleId, entity: entity)
+    return formSpecCatalogLookup("\(target.module)/\(target.entity)")
 }
 
 public func recordFromApi(_ row: [String: Any], moduleId: String, entity: String) -> ErpRecord {

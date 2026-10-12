@@ -172,6 +172,12 @@ final class ApiTests: XCTestCase {
         XCTAssertEqual(apiStorageTarget(moduleId: "receipts-payments", entity: "Receipts").module, "banking")
         XCTAssertEqual(apiStorageTarget(moduleId: "clock-in", entity: "My punches").entity, "attendance")
         XCTAssertEqual(apiStorageTarget(moduleId: "general-requests", entity: "General Requests").module, "requests")
+        XCTAssertEqual(apiStorageTarget(moduleId: "maintenance", entity: "Work Orders").module, "production")
+        XCTAssertEqual(apiStorageTarget(moduleId: "maintenance", entity: "Work Orders").entity, "work-orders")
+        XCTAssertEqual(apiStorageTarget(moduleId: "maintenance", entity: "Job Cards").entity, "batch-records")
+        XCTAssertEqual(apiStorageTarget(moduleId: "production", entity: "Factories").entity, "plants")
+        XCTAssertEqual(apiStorageTarget(moduleId: "production", entity: "Shop Floors").entity, "sections")
+        XCTAssertEqual(apiStorageTarget(moduleId: "security", entity: "Gate Check-In/Out").entity, "gate-passes")
     }
 
     func testRemoteLoginUsesFrontendAndFallsBackWhenOffline() async {
@@ -304,6 +310,23 @@ final class ApiTests: XCTestCase {
         XCTAssertTrue(keys.contains { $0.caseInsensitiveCompare("currency") == .orderedSame })
         XCTAssertTrue(keys.contains { $0.caseInsensitiveCompare("address") == .orderedSame })
         XCTAssertFalse(keys.contains { $0.caseInsensitiveCompare("amount") == .orderedSame })
+        let journey = s.formFieldKeys("fleet", "Journey Plans")
+        XCTAssertTrue(journey.contains { $0.caseInsensitiveCompare("vehicle") == .orderedSame })
+        let farmers = s.formFieldKeys("farmer-traceability", "Farmers")
+        XCTAssertFalse(farmers.isEmpty)
+        let orders = s.formFieldKeys("maintenance", "Work Orders")
+        XCTAssertTrue(orders.contains { $0.caseInsensitiveCompare("workCenter") == .orderedSame })
+        let factories = s.formFieldKeys("production", "Factories")
+        XCTAssertTrue(factories.contains { $0.caseInsensitiveCompare("latitude") == .orderedSame })
+        let customerForm = formSpecs(moduleId: "sales", entity: "Customers")
+        XCTAssertEqual(customerForm.first { $0.key == "email" }?.type, "email")
+        XCTAssertEqual(customerForm.first { $0.key == "address" }?.type, "textarea")
+        XCTAssertTrue(formSpecs(moduleId: "banking", entity: "Bank & Cash Accounts").first { $0.key == "type" }?.options.contains("Bank") == true)
+        for module in erpModules() {
+            for entity in module.entities {
+                XCTAssertFalse(formSpecs(moduleId: module.id, entity: entity).isEmpty, "\(module.id) \(entity)")
+            }
+        }
         let created = ErpRecord(
             id: "cust-1",
             moduleId: "sales",

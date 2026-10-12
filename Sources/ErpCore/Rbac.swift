@@ -257,6 +257,7 @@ public struct DemoAccount: Equatable, Sendable {
 public let explicitGrantModules: Set<String> = [
     "rnd", "lab", "qa", "production", "benchmark", "crm", "logistics", "distribution",
     "fleet", "security", "investments", "assets", "capital", "contract-manager",
+    "maintenance", "farmer-traceability",
 ]
 
 public let contractorModules: Set<String> = ["projects", "contract-manager"]

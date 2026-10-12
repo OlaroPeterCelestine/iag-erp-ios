@@ -11,7 +11,7 @@ let package = Package(
         .library(name: "ErpCore", targets: ["ErpCore"]),
     ],
     targets: [
-        .target(name: "ErpCore"),
+        .target(name: "ErpCore", resources: [.process("FormSpecs.json")]),
         // App sources live in the Xcode target. This target exists so SourceKit
         // can resolve `import ErpCore` when the folder is opened outside Xcode.
         .executableTarget(

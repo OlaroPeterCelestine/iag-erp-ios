@@ -117,5 +117,6 @@ public let webErpDepartmentIds: [String] = [
     "banking", "receipts-payments", "expense-claims", "general-requests", "oral-payment-requests",
     "sales", "purchases", "inventory", "projects", "contract-manager", "fleet", "security", "crm",
     "logistics", "distribution", "rnd", "lab", "qa", "production", "benchmark", "pos", "payroll",
+    "maintenance", "farmer-traceability",
     "investments", "assets", "capital", "accounts", "folders", "documents", "reports",
 ]

@@ -179,7 +179,16 @@ final class RbacTests: XCTestCase {
         let modules = erpModules()
         let seed = completeCatalogSeed(modules)
         XCTAssertGreaterThanOrEqual(modules.count, 28)
+        let byId = Dictionary(uniqueKeysWithValues: modules.map { ($0.id, Set($0.entities)) })
+        XCTAssertTrue(byId["fleet"]?.contains("Journey Plans") == true)
+        XCTAssertTrue(byId["distribution"]?.contains("Beats") == true)
+        XCTAssertTrue(byId["payroll"]?.contains("Leave Policies") == true)
+        XCTAssertTrue(byId["inventory"]?.contains("Putaway Rules") == true)
+        XCTAssertTrue(byId["purchases"]?.contains("Purchase Requisitions") == true)
+        XCTAssertTrue(byId["maintenance"]?.contains("Work Orders") == true)
+        XCTAssertTrue(byId["farmer-traceability"]?.contains("Farmers") == true)
         for module in modules {
+            XCTAssertFalse(module.icon.isEmpty, "\(module.id) has no icon")
             if module.id == "clock-in" { continue }
             for entity in module.entities {
                 XCTAssertTrue(
@@ -251,8 +260,8 @@ final class RbacTests: XCTestCase {
 
     func testSuiteAppsAreSeparateFullTools() {
         XCTAssertEqual(suiteApps.map(\.id).sorted(), [
-            "contracts", "crm", "dms", "finance", "fleet", "hr", "inventory", "lab", "logistics", "pos",
-            "procurement", "production", "projects", "quality", "requests", "sales", "security",
+            "contracts", "crm", "dms", "finance", "fleet", "hr", "inventory", "lab", "logistics", "maintenance", "pos",
+            "procurement", "production", "projects", "quality", "requests", "sales", "security", "trace",
         ].sorted())
         XCTAssertEqual(suiteAppById("dms")?.label, "Distribution")
         XCTAssertEqual(suiteAppById("sales")?.label, "ERP")

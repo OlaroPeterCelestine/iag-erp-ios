@@ -59,7 +59,7 @@ struct DepartmentView: View {
                                     DeskRow(
                                         title: entity,
                                         subtitle: featureLine(store, moduleId: moduleId, entity: entity),
-                                        systemName: entityIcon(entity),
+                                        systemName: featureIcon(entity, fallback: module.icon),
                                         color: iagColor(module.color)
                                     )
                                     .padding(.horizontal, 14)
@@ -130,7 +130,7 @@ struct EntityListView: View {
                                     RecordDetailView(recordId: rec.id)
                                 } label: {
                                     HStack(alignment: .center, spacing: 12) {
-                                        IagIconWell(systemName: entityIcon(entity), color: statusColor(rec.status), size: 32)
+                                        IagIconWell(systemName: featureIcon(entity, fallback: store.moduleById(moduleId)?.icon ?? entityIcon(entity)), color: statusColor(rec.status), size: 32)
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(rec.title)
                                                 .font(.subheadline.weight(.medium))
@@ -320,6 +320,7 @@ struct RecordFormView: View {
     @State private var subtitle = ""
     @State private var amount = ""
     @State private var extras: [String: String] = [:]
+    @State private var statusText = ""
     @State private var error: String?
     @State private var primed = false
 
@@ -328,12 +329,13 @@ struct RecordFormView: View {
         return box.store.records.first { $0.id == recordId }
     }
 
-    private var fieldKeys: [String] {
-        box.store.formFieldKeys(moduleId, entity)
-    }
+    private var specs: [FormFieldSpec] { formSpecs(moduleId: moduleId, entity: entity) }
 
     private var status: String {
-        existing?.status ?? newRecordStatus(module: box.store.moduleById(moduleId), entity: entity)
+        if specs.contains(where: { $0.key == "status" }), !statusText.isEmpty {
+            return statusText
+        }
+        return existing?.status ?? newRecordStatus(module: box.store.moduleById(moduleId), entity: entity)
     }
 
     var body: some View {
@@ -358,14 +360,17 @@ struct RecordFormView: View {
                         ("Amount", amount.isEmpty ? "—" : (Double(amount).map(compactMoney) ?? amount)),
                     ])
                     IagGrouped {
-                        formField("Reference", text: $title, prompt: "Name or number")
-                        IagRowDivider(inset: 14)
-                        formField("Note", text: $subtitle, prompt: "Who, where, or why")
-                        IagRowDivider(inset: 14)
-                        formField("Amount", text: $amount, prompt: "UGX", numeric: true)
-                        ForEach(fieldKeys, id: \.self) { key in
+                        if specs.isEmpty {
+                            formField("Reference", text: $title, prompt: "Name or number")
                             IagRowDivider(inset: 14)
-                            formField(prettyLabel(key), text: extraBinding(key), prompt: "")
+                            formField("Note", text: $subtitle, prompt: "Who, where, or why")
+                            IagRowDivider(inset: 14)
+                            formField("Amount", text: $amount, prompt: "UGX", numeric: true)
+                        } else {
+                            ForEach(Array(specs.enumerated()), id: \.element.id) { index, spec in
+                                specField(spec)
+                                if index < specs.count - 1 { IagRowDivider(inset: 14) }
+                            }
                         }
                     }
                     if let error {
@@ -392,6 +397,7 @@ struct RecordFormView: View {
     private func prime() {
         guard !primed else { return }
         primed = true
+        statusText = existing?.status ?? newRecordStatus(module: box.store.moduleById(moduleId), entity: entity)
         guard let existing else { return }
         title = existing.title
         subtitle = existing.subtitle
@@ -399,10 +405,78 @@ struct RecordFormView: View {
             amount = value.rounded() == value ? String(Int(value)) : String(value)
         }
         var next = extras
-        for key in fieldKeys {
-            next[key] = existing.fields[key] ?? ""
+        for spec in specs where !isHeaderField(spec.key) {
+            next[spec.key] = existing.fields.first { $0.key.caseInsensitiveCompare(spec.key) == .orderedSame }?.value ?? ""
         }
         extras = next
+    }
+
+    private func isHeaderField(_ key: String) -> Bool {
+        if key == "description" || key == "amount" || key == "status" { return true }
+        if key == titleKey { return true }
+        return false
+    }
+
+    private var titleKey: String? {
+        specs.first { ["name", "reference", "title"].contains($0.key) }?.key
+    }
+
+    private func binding(for spec: FormFieldSpec) -> Binding<String> {
+        if spec.key == titleKey { return $title }
+        if spec.key == "description" { return $subtitle }
+        if spec.key == "amount" { return $amount }
+        if spec.key == "status" { return $statusText }
+        return extraBinding(spec.key)
+    }
+
+    @ViewBuilder
+    private func specField(_ spec: FormFieldSpec) -> some View {
+        let text = binding(for: spec)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(spec.required ? "\(spec.label) *" : spec.label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+            if spec.type == "select", !spec.options.isEmpty {
+                Menu {
+                    ForEach(spec.options, id: \.self) { option in
+                        Button(option) { text.wrappedValue = option }
+                    }
+                } label: {
+                    HStack {
+                        Text(text.wrappedValue.isEmpty ? "Choose" : text.wrappedValue)
+                            .font(.subheadline)
+                            .foregroundStyle(text.wrappedValue.isEmpty ? .secondary : .primary)
+                        Spacer()
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } else if spec.type == "textarea" {
+                TextField(fieldPrompt(spec), text: text, axis: .vertical)
+                    .lineLimit(3...6)
+                    .font(.subheadline)
+            } else {
+                TextField(fieldPrompt(spec), text: text)
+                    .font(.subheadline)
+                    .iagNumericKeyboard(spec.type == "number")
+                    #if os(iOS)
+                    .keyboardType(spec.type == "email" ? .emailAddress : (spec.type == "number" ? .decimalPad : (spec.type == "date" ? .numbersAndPunctuation : .default)))
+                    .textInputAutocapitalization(spec.type == "email" ? .never : .sentences)
+                    #endif
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    private func fieldPrompt(_ spec: FormFieldSpec) -> String {
+        switch spec.type {
+        case "date": return "YYYY-MM-DD"
+        case "number": return "0"
+        case "email": return "name@company.com"
+        default: return ""
+        }
     }
 
     private func extraBinding(_ key: String) -> Binding<String> {
@@ -426,9 +500,16 @@ struct RecordFormView: View {
     }
 
     private func save() {
+        for spec in specs where spec.required {
+            let value = binding(for: spec).wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if value.isEmpty {
+                error = "Add \(spec.label)."
+                return
+            }
+        }
         let reference = title.trimmingCharacters(in: .whitespacesAndNewlines)
         if reference.isEmpty {
-            error = "Add a reference."
+            error = specs.isEmpty ? "Add a reference." : "Add a name."
             return
         }
         var fields: [String: String] = [:]

@@ -331,7 +331,7 @@ struct FinHome: View {
                         .fill(iagColor(action.color).opacity(0.12))
                         .frame(width: 36, height: 36)
                         .overlay {
-                            Image(systemName: action.entity.map(entityIcon) ?? action.icon)
+                            Image(systemName: action.entity.map { featureIcon($0, fallback: action.icon) } ?? action.icon)
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(iagColor(action.color))
                                 .symbolRenderingMode(.hierarchical)
@@ -1029,7 +1029,7 @@ struct SearchHitRow: View {
             NavigationLink {
                 EntityListView(moduleId: hit.moduleId, entity: hit.entity ?? "")
             } label: {
-                DeskRow(title: hit.title, subtitle: "Feature · \(hit.subtitle)", systemName: entityIcon(hit.title))
+                DeskRow(title: hit.title, subtitle: "Feature · \(hit.subtitle)", systemName: featureIcon(hit.title, fallback: box.store.moduleById(hit.moduleId)?.icon ?? "square.grid.2x2"))
             }
         case .record:
             NavigationLink {

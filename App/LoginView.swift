@@ -21,35 +21,23 @@ struct LoginView: View {
     @State private var busy = false
     @State private var showReset = false
     @State private var showPassword = false
+    @State private var systemId: String?
     @FocusState private var focus: LoginField?
+
+    private var system: SuiteApp? { suiteApps.first { $0.id == systemId } }
 
     var body: some View {
         NavigationStack {
             GeometryReader { geo in
             ScrollView {
-                VStack(spacing: 0) {
-                    IagBrandLogo(height: 48, mono: true)
-                        .padding(.top, 20)
-                    Text(appName)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(LoginPalette.muted)
-                        .tracking(0.8)
-                        .textCase(.uppercase)
-                        .padding(.top, 18)
-                    Text("Sign in")
-                        .font(.system(size: 32, weight: .semibold))
-                        .foregroundStyle(LoginPalette.ink)
-                        .padding(.top, 12)
-                    Text("Use your IAG workspace credentials.")
-                        .font(.subheadline)
-                        .foregroundStyle(LoginPalette.muted)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 8)
-                    form
-                        .padding(.top, 32)
-                        .padding(.bottom, 24)
+                Group {
+                    if let system {
+                        systemLogin(system)
+                    } else {
+                        systemPicker
+                    }
                 }
-                .frame(maxWidth: 400)
+                .frame(maxWidth: system == nil ? 520 : 400)
                 .padding(.horizontal, 24)
                 .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .center)
             }
@@ -76,7 +64,106 @@ struct LoginView: View {
         )
     }
 
-    private var form: some View {
+    private var systemPicker: some View {
+        VStack(spacing: 0) {
+            IagBrandLogo(height: 48, mono: true)
+                .padding(.top, 20)
+            Text(appName)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(LoginPalette.muted)
+                .tracking(0.8)
+                .textCase(.uppercase)
+                .padding(.top, 18)
+            Text("Sign in")
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundStyle(LoginPalette.ink)
+                .padding(.top, 12)
+            Text("Choose a system. One IAG account opens it.")
+                .font(.subheadline)
+                .foregroundStyle(LoginPalette.muted)
+                .multilineTextAlignment(.center)
+                .padding(.top, 8)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                ForEach(suiteApps) { app in
+                    Button {
+                        systemId = app.id
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(iagColor(app.color).opacity(0.12))
+                                    .frame(width: 40, height: 40)
+                                Image(systemName: app.icon)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(iagColor(app.color))
+                            }
+                            Text(app.label)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(LoginPalette.ink)
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(2)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+                        .background(LoginPalette.field, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(LoginPalette.line, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.top, 28)
+            .padding(.bottom, 24)
+        }
+    }
+
+    private func systemLogin(_ app: SuiteApp) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button {
+                    systemId = nil
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.caption.weight(.semibold))
+                        Text("Systems")
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .foregroundStyle(LoginPalette.ink)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+            .padding(.top, 16)
+            ZStack {
+                Circle()
+                    .fill(iagColor(app.color).opacity(0.12))
+                    .frame(width: 64, height: 64)
+                Image(systemName: app.icon)
+                    .font(.system(size: 26, weight: .medium))
+                    .foregroundStyle(iagColor(app.color))
+            }
+            .padding(.top, 28)
+            Text(app.label)
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundStyle(LoginPalette.ink)
+                .multilineTextAlignment(.center)
+                .padding(.top, 16)
+            Text(app.description)
+                .font(.subheadline)
+                .foregroundStyle(LoginPalette.muted)
+                .multilineTextAlignment(.center)
+                .padding(.top, 8)
+            form(accent: iagColor(app.color))
+                .padding(.top, 32)
+                .padding(.bottom, 24)
+        }
+    }
+
+    private func form(accent: Color) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             loginField("Username", text: $username, field: .username)
             VStack(alignment: .leading, spacing: 6) {
@@ -101,7 +188,7 @@ struct LoginView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            .background(IagTheme.leaf, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .disabled(busy)
             .opacity(busy ? 0.72 : 1)
             .padding(.top, 8)
@@ -150,7 +237,7 @@ struct LoginView: View {
     ]
 
     private func signInOnDevice(username: String, password: String) {
-        if let raw = box.store.loginOnThisDevice(username, password) {
+        if let raw = box.store.loginOnThisDevice(username, password, departmentId: systemId) {
             notice = userNotice(from: raw)
         }
     }
@@ -236,10 +323,10 @@ struct LoginView: View {
         Task {
             let result: String?
             if password.count < 10 {
-                result = box.store.loginOnThisDevice(username, password)
+                result = box.store.loginOnThisDevice(username, password, departmentId: systemId)
             } else {
-                let live = await box.store.loginAsync(username, password)
-                if live == nil || box.store.loginOnThisDevice(username, password) == nil {
+                let live = await box.store.loginAsync(username, password, departmentId: systemId)
+                if live == nil || box.store.loginOnThisDevice(username, password, departmentId: systemId) == nil {
                     result = nil
                 } else {
                     result = live
