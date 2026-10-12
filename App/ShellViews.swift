@@ -77,7 +77,7 @@ struct FinHome: View {
     var stats: [WelcomeStat]
     var actions: [QuickAction]
     var approvalCount: Int
-    var canOpenApprovals: Bool
+    var noticeCount: Int
     var kpis: [Kpi]
     var apps: [SuiteApp]
     var recents: [ErpRecord]
@@ -130,15 +130,13 @@ struct FinHome: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Apps")
             }
-            if canOpenApprovals {
-                NavigationLink {
-                    ApprovalsList()
-                } label: {
-                    cornerIcon(systemName: "bell", color: IagTheme.leaf, badge: approvalCount)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Notifications")
+            NavigationLink {
+                NotificationsList()
+            } label: {
+                cornerIcon(systemName: "bell", color: IagTheme.orange, badge: noticeCount)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Notifications")
             NavigationLink {
                 ProfileView()
             } label: {
@@ -414,10 +412,10 @@ struct FinHome: View {
     private var waiting: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Waiting for you")
+                Text("Approvals")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                NavigationLink { ApprovalsList() } label: { Text("View all") }
+                NavigationLink { ApprovalsList() } label: { Text("Open desk") }
                     .font(.caption.weight(.medium))
                     .foregroundStyle(IagTheme.leaf)
                     .buttonStyle(.plain)
@@ -488,7 +486,7 @@ struct HomeView: View {
                 stats: store.welcomeStats,
                 actions: store.departmentTools.isEmpty ? Array(store.homeQuickActions.prefix(8)) : store.departmentTools,
                 approvalCount: store.appPendingApprovals.count,
-                canOpenApprovals: store.canApprove,
+                noticeCount: store.appNotices.count,
                 kpis: store.kpis,
                 apps: [],
                 recents: Array(store.recent.filter { rec in
@@ -582,6 +580,76 @@ struct DepartmentsView: View {
             .searchable(text: $query, prompt: "Find a desk or feature")
         }
     }
+}
+
+struct NotificationsList: View {
+    @EnvironmentObject var box: StoreBox
+
+    var body: some View {
+        let _ = box.tick
+        let notes = box.store.activeAppId == nil ? box.store.notices : box.store.appNotices
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                PageStats(stats: [
+                    ("Updates", "\(notes.count)"),
+                    ("Approved", "\(notes.filter { $0.status.lowercased().contains("approv") }.count)"),
+                    ("Rejected", "\(notes.filter { $0.status.lowercased().contains("reject") }.count)"),
+                    ("Posted", "\(notes.filter { rec in ["posted", "cleared", "paid"].contains { rec.status.lowercased().contains($0) } }.count)"),
+                ])
+                SectionHeading(title: "Updates", detail: notes.isEmpty ? "Quiet" : "Decisions and posted results")
+                if notes.isEmpty {
+                    IagEmptyHint(text: "No decisions or posted results yet.", systemName: "bell.slash")
+                        .background(IagTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                } else {
+                    IagGrouped {
+                        ForEach(Array(notes.enumerated()), id: \.element.id) { index, rec in
+                            NavigationLink {
+                                RecordDetailView(recordId: rec.id)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Circle()
+                                        .fill(statusColor(rec.status).opacity(0.12))
+                                        .frame(width: 36, height: 36)
+                                        .overlay {
+                                            Image(systemName: noticeIcon(rec.status))
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundStyle(statusColor(rec.status))
+                                        }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(rec.title)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.primary)
+                                            .lineLimit(1)
+                                        Text("\(rec.entity) · \(rec.status)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer(minLength: 8)
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                            }
+                            .buttonStyle(.plain)
+                            if index < notes.count - 1 { IagRowDivider() }
+                        }
+                    }
+                }
+            }
+            .iagPage()
+        }
+        .scrollIndicators(.hidden)
+        .background(IagTheme.canvas.ignoresSafeArea())
+        .iagBar("Notifications", subtitle: "Decisions and posted results")
+    }
+}
+
+private func noticeIcon(_ status: String) -> String {
+    let s = status.lowercased()
+    if s.contains("reject") || s.contains("void") { return "xmark" }
+    if s.contains("return") { return "arrow.uturn.backward" }
+    if s.contains("paid") || s.contains("posted") || s.contains("cleared") { return "doc.text" }
+    return "bell"
 }
 
 struct ApprovalsView: View {
@@ -820,7 +888,7 @@ struct AppsLauncherView: View {
                 stats: store.welcomeStats,
                 actions: Array(store.launcherQuickActions.prefix(8)),
                 approvalCount: store.pendingApprovals.count,
-                canOpenApprovals: store.canApprove,
+                noticeCount: store.notices.count,
                 kpis: store.kpis,
                 apps: store.visibleSuiteApps,
                 recents: [],

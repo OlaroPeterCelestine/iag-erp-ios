@@ -363,6 +363,22 @@ final class RbacTests: XCTestCase {
         XCTAssertTrue(s.welcomeStats.contains { $0.id == "clock" })
     }
 
+    func testNoticesStayOutOfTheApprovalQueue() {
+        let s = store()
+        XCTAssertNil(s.login("admin", testPassword))
+        let waiting = Set(s.pendingApprovals.map(\.id))
+        XCTAssertFalse(s.notices.isEmpty)
+        XCTAssertTrue(s.notices.allSatisfy { !waiting.contains($0.id) && s.isNoticeStatus($0.status) && !s.isOpenStatus($0.status) })
+        XCTAssertTrue(s.notices.contains { $0.status == "Approved" })
+        XCTAssertFalse(s.notices.contains { $0.status == "Pending" || $0.status == "Active" })
+        s.logout()
+
+        XCTAssertNil(s.login("viewer", testPassword))
+        XCTAssertFalse(s.canApprove)
+        XCTAssertFalse(s.notices.isEmpty)
+        XCTAssertTrue(s.notices.allSatisfy { !s.pendingApprovals.map(\.id).contains($0.id) })
+    }
+
     func testPasswordsAreHashedAndHaveNoSharedDefault() {
         let persistence = MemoryKeyValueStore()
         let s = ErpStore(persistence: persistence)

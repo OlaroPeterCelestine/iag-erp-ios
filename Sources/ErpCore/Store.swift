@@ -83,6 +83,19 @@ public final class ErpStore {
     public var canClockIn: Bool { user != nil && crudForRole(roleName, definition: currentRole).view }
     public var customRoles: [RoleDefinition] { roles.filter { !$0.system } }
     public var pendingApprovals: [ErpRecord] { pendingApprovalsFor(nil) }
+    /// Decisions and posted results. The approval queue is excluded so a notice is not the same item waiting on a desk.
+    public var notices: [ErpRecord] {
+        let waiting = Set(pendingApprovals.map(\.id))
+        let rows = records.filter { rec in
+            canOpen(rec.moduleId) && !waiting.contains(rec.id) && isNoticeStatus(rec.status)
+        }
+        return Array(rows.reversed().prefix(40))
+    }
+    public var appNotices: [ErpRecord] {
+        guard activeSuiteApp != nil else { return notices }
+        let ids = Set(appModules.map(\.id))
+        return notices.filter { ids.contains($0.moduleId) }
+    }
     public var recent: [ErpRecord] {
         let scoped = records.filter { rec in
             guard canOpen(rec.moduleId) else { return false }
@@ -402,6 +415,13 @@ public final class ErpStore {
     public func isOpenStatus(_ status: String) -> Bool {
         let s = status.lowercased()
         return s.contains("pending") || s.contains("open") || s.contains("submitted")
+    }
+
+    public func isNoticeStatus(_ status: String) -> Bool {
+        let s = status.lowercased()
+        if isOpenStatus(s) || s.contains("draft") || s == "active" { return false }
+        return s.contains("approv") || s.contains("reject") || s.contains("return")
+            || s.contains("paid") || s.contains("posted") || s.contains("cleared") || s.contains("void")
     }
 
     public func pendingApprovalsFor(_ moduleId: String?) -> [ErpRecord] {
