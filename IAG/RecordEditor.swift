@@ -6,6 +6,7 @@ struct RecordEditor: View {
     let existing: SavedRecord?
 
     @EnvironmentObject private var store: RecordStore
+    @EnvironmentObject private var session: SessionStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var values: [String: String]
@@ -33,17 +34,32 @@ struct RecordEditor: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            if locked {
+                Section {
+                    Text(existing == nil
+                         ? "\(session.role.rawValue) cannot add records."
+                         : "\(session.role.rawValue) can view this record and cannot change it.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
             Section {
                 ForEach(form.fields) { field in
-                    fieldRow(field)
+                    if locked {
+                        LabeledContent(field.label, value: display(field).isEmpty ? "—" : display(field))
+                    } else {
+                        fieldRow(field)
+                    }
                 }
             }
         }
-        .navigationTitle(existing == nil ? "New" : "Edit")
+        .navigationTitle(locked ? "View" : (existing == nil ? "New" : "Edit"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save", action: save)
+            if !locked {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save", action: save)
+                }
             }
         }
         .fileImporter(
@@ -124,6 +140,11 @@ struct RecordEditor: View {
                 .font(.footnote)
             }
         }
+    }
+
+    private var locked: Bool {
+        if existing == nil { return !session.access.canCreate }
+        return !session.access.canEdit
     }
 
     private func label(_ field: FieldDef) -> String {

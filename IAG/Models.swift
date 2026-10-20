@@ -27,6 +27,19 @@ struct SystemCatalog: Decodable, Identifiable, Hashable {
             return count == 1 ? "1 form" : "\(count) forms"
         }
     }
+
+    var allForms: [FormDef] {
+        groups.flatMap(\.forms)
+    }
+
+    func form(named name: String) -> FormDef? {
+        for group in groups {
+            if let form = group.forms.first(where: { $0.name == name }) {
+                return form
+            }
+        }
+        return nil
+    }
 }
 
 struct FormGroup: Decodable, Identifiable, Hashable {
